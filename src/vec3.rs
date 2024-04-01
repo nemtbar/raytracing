@@ -7,6 +7,8 @@ pub struct Vec3 {
     pub z: f32
 }
 
+pub type Point = Vec3;
+
 impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Self{
         Vec3{x, y, z}
@@ -16,7 +18,12 @@ impl Vec3 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
 
-    pub fn dot()
+    pub fn dot(&self, other: &Self) -> f32 {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+    pub fn normalize(&self) -> Vec3 {
+        self / self.length()
+    }
 }
 // add
 impl Add<&Vec3> for &Vec3{
@@ -114,3 +121,33 @@ impl Mul<f32> for Vec3{
     }
 }
 
+//div
+impl Div<&f32> for &Vec3{
+    type Output = Vec3;
+    fn div(self, rhs: &f32) -> Self::Output {
+        Vec3::new(self.x/rhs, self.y/rhs, self.z/rhs)
+    }
+}
+
+impl Div<f32> for &Vec3{
+    type Output = Vec3;
+    
+    fn div(self, rhs: f32) -> Self::Output {
+        self / &rhs
+    }
+}
+
+impl Div<&f32> for Vec3{
+    type Output = Vec3;
+    
+    fn div(self, rhs: &f32) -> Self::Output {
+        &self / rhs
+    }
+}
+impl Div<f32> for Vec3{
+    type Output = Vec3;
+    
+    fn div(self, rhs: f32) -> Self::Output {
+        &self / &rhs
+    }
+}

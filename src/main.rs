@@ -1,5 +1,5 @@
 mod vec3;
-use vec3::Vec3;
+use vec3::{Vec3, Point};
 use std::fs::File;
 use std::io::{self, Write};
 const WIDTH: usize = 500;
@@ -44,22 +44,47 @@ impl Image{
     }
 }
 
-fn simple(x: usize, y: usize) -> Pixel{
-    let ux = (x as f32) / (WIDTH as f32);
-    let uy = 1.0-(y as f32) / (HEIGHT as f32);
-    let mut pix = Pixel::default();
-    pix.r = (ux * 255.0) as u8;
-    pix.g = (uy * 255.0) as u8;
-    pix.b = 255;
-    pix
+struct Ray {
+    start: Point,
+    dir: Vec3,
+}
+
+impl Ray {
+    fn new(start: Point, dir: Vec3) -> Self{
+        Self{start, dir}
+    }
+}
+
+fn intersect(ray: Ray, sphere: Point) -> bool {
+    //https://kylehalladay.com/blog/tutorial/math/2013/12/24/Ray-Sphere-Intersection.html
+    let vec = &sphere - &ray.start;
+    let len = vec.dot(&ray.dir);
+    if len < 0.0 {
+        false
+    } else {
+        let d = ((len * len) - (vec.length() * vec.length())).sqrt();
+        if d > 1.0 {
+            false
+        } else {
+            true
+        }
+    }
+}
+
+fn frag(x: usize, y: usize) -> Pixel{
+    let ux = ((x as f32) / (WIDTH as f32) - 1.0) / 2.;
+    let uy = ((y as f32) / (HEIGHT as f32) - 1.) / 2.;
+    let camera: Point = Vec3::new(0., -2., 0.);
+    let dir = Vec3::new(ux, 0., uy)-&camera.normalize();
+    let f = intersect(Ray::new(camera, dir), Vec3::new(0., 0., 0.));
+    match f {
+        true => Pixel{r: 255, g: 255, b: 255},
+        false => Pixel::default(),
+    }
     
 }
 
 fn main(){
-    let v1 = Vec3::new(0., 1., 2.);
-    let v2 = Vec3::new(10., 4., 1.);
-    let v12 = &v1 * &2.0;
-    println!("{:?}", v12);
-    let sample = Image::new_with_method(WIDTH, HEIGHT, simple);
+    let sample = Image::new_with_method(WIDTH, HEIGHT, frag);
     sample.display().unwrap(); 
 }
