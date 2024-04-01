@@ -6,13 +6,19 @@ pub struct Vec3 {
     pub y: f32,
     pub z: f32
 }
-//add
+
 impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Self{
         Vec3{x, y, z}
     }
-}
 
+    pub fn length(&self) -> f32{
+        (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
+    }
+
+    pub fn dot()
+}
+// add
 impl Add<&Vec3> for &Vec3{
     type Output = Vec3;
 
