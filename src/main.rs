@@ -1,86 +1,65 @@
-extern crate image;
-use image::{RgbImage, Rgb};
+mod vec3;
+use vec3::Vec3;
+use std::fs::File;
+use std::io::{self, Write};
+const WIDTH: usize = 500;
+const HEIGHT: usize = 500;
 
-
-const WIDTH: u32 = 255; 
-const HEIGHT: u32 = 255; 
-
-fn map(value: f32, min1: f32, max1: f32, min2: f32, max2: f32)-> f32 {
-    return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
+#[derive(Clone, Copy, Default)]
+pub struct Pixel{
+    r: u8,
+    g: u8,
+    b: u8
 }
 
-#[derive(Clone, Copy, Debug)]
-struct Vec3{
-    x: f32,
-    y: f32,
-    z: f32
+
+struct Image{
+    pixels: [[Pixel; WIDTH]; HEIGHT]
 }
 
-impl Vec3 {
-    fn new(a: f32, b: f32, c: f32) -> Vec3{
-        return Vec3{x: a, y: b, z: c};
+impl Image{
+    pub fn new() -> Self{
+        Self{ pixels: [[Pixel::default(); WIDTH]; HEIGHT] }
     }
 
-    fn add(mut self, other: Vec3)-> Vec3{
-        self.x += other.x;
-        self.y += other.y;
-        self.z += other.z;
-        return self;
+    pub fn new_with_method(height: usize, width: usize, method: impl Fn(usize, usize) -> Pixel) -> Self{
+        let mut image = Self::new();
+        for row in 0..height{
+            for col in 0..width{
+                image.pixels[row][col] = method(col, row);
+            }
+        }
+        image
     }
-
-    fn sub(mut self, other: Vec3)-> Vec3{
-        self.x -= other.x;
-        self.y -= other.y;
-        self.z -= other.z;
-        return self;
+    fn display(self) -> io::Result<()>{
+        let mut file = File::create("sample.ppm")?;
+        writeln!(file, "P3\n{} {}\n255", self.pixels.len(), self.pixels[0].len())?;
+        for y in 0..self.pixels.len(){
+            for x in 0..self.pixels[0].len(){
+                let p = self.pixels[y][x];
+                write!(file, "{} {} {} ", p.r, p.g, p.b)?;
+            }
+        }
+        Ok(())
     }
-
-    fn normalize(&mut self){
-        self.x /= self.length();
-        self.y /= self.length();
-        self.z /= self.length();
-    }
-
-    fn length(self) -> f32 {
-        return f32::sqrt(f32::powf(self.x, 2.0)+
-        f32::powf(self.y, 2.0)+f32::powf(self.z, 2.0))
-    }
-
-    fn mult(mut self, a: f32) -> Vec3{
-        self.x *= a;
-        self.y *= a;
-        self.z *= a;
-        return self;
-    }
-
 }
 
-fn shoot(start: Vec3, dir: Vec3)-> f32{
-    let sphere = Vec3::new(0.0, 0.0, 0.0);
-    let mut traveled = 0.0;
-    for _i in 0..100{
-        let ray = start.clone().add(dir.clone().mult(traveled));
-        let d = ray.sub(sphere).length()-1.0;
-        if d < 0.001{break;}
-        if d > 100.0{break;}
-        traveled += d;
-    }
-    return map(traveled, 0.0, 100.0, 255.0, 0.0);
+fn simple(x: usize, y: usize) -> Pixel{
+    let ux = (x as f32) / (WIDTH as f32);
+    let uy = 1.0-(y as f32) / (HEIGHT as f32);
+    let mut pix = Pixel::default();
+    pix.r = (ux * 255.0) as u8;
+    pix.g = (uy * 255.0) as u8;
+    pix.b = 255;
+    pix
+    
 }
 
 fn main(){
-    let mut img = RgbImage::new(WIDTH, HEIGHT);
-    let camera = Vec3::new(0.0, -3.0, 0.0);
-    for x in 0..WIDTH{
-        for y in 0..HEIGHT {
-            let uv_x = map(x as f32, 0.0, WIDTH as f32, 0.0, 1.0);
-            let uv_y = map(y as f32, 0.0, HEIGHT as f32, 0.0, 1.0);
-            let mut dir = Vec3::new(uv_x*2.0-1.0, camera.y+1.0, uv_y*2.0-1.0);
-            dir = dir.sub(camera.clone());
-            dir.normalize();
-            let dis = shoot(camera, dir) as u8;
-            img.put_pixel(x, y, Rgb([dis, dis, dis]));
-        }
-    }
-    img.save("output.png").unwrap();
+    let v1 = Vec3::new(0., 1., 2.);
+    let v2 = Vec3::new(10., 4., 1.);
+    let v12 = &v1 * &2.0;
+    println!("{:?}", v12);
+    let sample = Image::new_with_method(WIDTH, HEIGHT, simple);
+    sample.display().unwrap(); 
 }
