@@ -28,14 +28,6 @@ impl Vec3 {
         assert_eq!(value >= 0.0 && value <= 1.0, true);
         self*(1.0-value) + other*value
     }
-    pub fn cross(&self, other: &Self) -> Self{
-        Vec3::new(
-            self.y * other.z - self.z * other.y,
-            self.z * other.x - self.x * other.z,
-            self.x * other.y - self.y * other.x
-        )
-    }
-
     pub fn mat_mult(&self, mat: &Vec<Vec<f32>>) -> Self{
         Self::new(
             self.x * mat[0][0] + self.y * mat[0][1] + self.z * mat[0][2],
