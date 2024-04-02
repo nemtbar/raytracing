@@ -53,16 +53,19 @@ impl Image{
     }
 }
 #[derive(Debug)]
-struct Ray {
-    start: Point,
-    dir: Vec3,
+pub struct Ray {
+    pub start: Point,
+    pub dir: Vec3,
 }
 
 impl Ray {
-    fn new(start: Point, dir: Vec3) -> Self{
+    pub fn new(start: Point, dir: Vec3) -> Self{
         Self{start, dir}
     }
 }
+
+
+
 
 struct Sphere {
     pos: Vec3,
@@ -81,8 +84,7 @@ fn intersect(ray: Ray, spheres: Vec<Sphere>) -> Option<Pixel> {
     //https://kylehalladay.com/blog/tutorial/math/2013/12/24/Ray-Sphere-Intersection.html
     let mut min_d: f32 = 100000.;
     let mut color = None;
-    for i in 0..spheres.len(){
-        let sphere = &spheres[i];
+    for sphere in spheres{
         let l = &sphere.pos - &ray.start;
         let tc = l.dot(&ray.dir);
         if tc < 0.0{
@@ -111,14 +113,20 @@ fn frag(x: usize, y: usize) -> Pixel{
     let g = 1.;
     let ux = (x as f32) / (WIDTH as f32) * (g  * 2.)- g;
     let uy = ((y as f32) / (HEIGHT as f32) * (g * 2.) - g) * -1.;
-    let camera: Point = Vec3::new(0., -5., 0.);
-    let dir = (Vec3::new(0., 0., 0.)-&camera).normalize();
-    
-    let point: Point = &camera + &dir;
+
+    //define important points
+    let mut camera: Point = Vec3::new(0., -5., 0.);
+    let mut dir = Vec3::new(ux, camera.y+1., uy)-&camera;
+
+    //rotation
+    let angle = 180.;
+    camera = camera.rot_x(angle);
+    dir = dir.rot_x(angle).normalize();
+    let ray = Ray::new(camera, dir);
     let spheres = vec![
-        Sphere::new(Vec3::new(0., 0., 0.), Pixel::new(255, 0, 0), 1.5),
+        Sphere::new(Vec3::new(0., 0., 0.), Pixel::new(255, 0, 0), 1.),
     ];
-    match intersect(Ray::new(camera, dir), spheres) {
+    match intersect(ray, spheres) {
         Some(color) => return color,
         None => {
             //background color

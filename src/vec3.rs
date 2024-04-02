@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Sub, Div};
+use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Default, Clone, Debug)]
 pub struct Vec3 {
@@ -35,6 +35,44 @@ impl Vec3 {
             self.x * other.y - self.y * other.x
         )
     }
+
+    pub fn mat_mult(&self, mat: &Vec<Vec<f32>>) -> Self{
+        Self::new(
+            self.x * mat[0][0] + self.y * mat[0][1] + self.z * mat[0][2],
+            self.x * mat[1][0] + self.y * mat[1][1] + self.z * mat[1][2],
+            self.x * mat[2][0] + self.y * mat[2][1] + self.z * mat[2][2]
+        )
+    }
+
+    pub fn rot_z(&self, degree: f32) -> Self{
+        let theta = f32::to_radians(degree);
+        let rot = vec![
+            vec![theta.cos(), -(theta.sin()), 0.0],
+            vec![theta.sin(), theta.cos(), 0.],
+            vec![0., 0., 1.]
+        ];
+        self.mat_mult(&rot)
+    }
+
+    pub fn rot_y(&self, degree: f32) -> Self {
+        let theta = f32::to_radians(degree);
+        let rot = vec![
+            vec![theta.cos(), 0., theta.sin()],
+            vec![0., 1., 0.],
+            vec![-(theta.sin()), 0., theta.cos()]
+        ];
+        self.mat_mult(&rot)
+    }
+
+    pub fn rot_x(&self, degree: f32) -> Self {
+        let theta = f32::to_radians(degree);
+        let rot = vec![
+            vec![1., 0., 0.],
+            vec![0., theta.cos(), -(theta.sin())],
+            vec![0., theta.sin(), theta.cos()]
+        ];
+        self.mat_mult(&rot)
+    }    
 }
 // add
 impl Add<&Vec3> for &Vec3{
