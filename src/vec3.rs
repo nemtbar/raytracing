@@ -24,6 +24,17 @@ impl Vec3 {
     pub fn normalize(&self) -> Vec3 {
         self / self.length()
     }
+    pub fn lerp(&self, other: &Self, value: f32) -> Self {
+        assert_eq!(value >= 0.0 && value <= 1.0, true);
+        self*(1.0-value) + other*value
+    }
+    pub fn cross(&self, other: &Self) -> Self{
+        Vec3::new(
+            self.y * other.z - self.z * other.y,
+            self.z * other.x - self.x * other.z,
+            self.x * other.y - self.y * other.x
+        )
+    }
 }
 // add
 impl Add<&Vec3> for &Vec3{
