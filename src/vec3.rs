@@ -1,4 +1,5 @@
 use std::ops::{Add, Div, Mul, Sub};
+use rand::Rng;
 
 #[derive(Default, Clone, Debug)]
 pub struct Vec3 {
@@ -15,7 +16,7 @@ impl Vec3 {
     }
 
     pub fn length(&self) -> f32{
-        (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
+        self.length_squared().sqrt()
     }
 
     pub fn dot(&self, other: &Self) -> f32 {
@@ -34,6 +35,30 @@ impl Vec3 {
             self.x * mat[1][0] + self.y * mat[1][1] + self.z * mat[1][2],
             self.x * mat[2][0] + self.y * mat[2][1] + self.z * mat[2][2]
         )
+    }
+
+    pub fn length_squared(&self) ->f32 {
+        self.x * self.x + self.y * self.y + self.z * self.z
+    }
+
+    pub fn random(norm: &Self) -> Self {
+        let mut rng = rand::thread_rng();
+        let mut c: u8 = 0;
+        let mut sol = Self::new(0., 0., 0.);
+        while true && c <= 50 {
+            let x = rng.gen_range(-1.0..1.0);
+            let y = rng.gen_range(-1.0..1.0);
+            let z = rng.gen_range(-1.0..1.0);
+            sol = Self {x, y, z};
+            if sol.length_squared() <= 1. {
+                break;
+            }
+            c += 1;
+        }
+        if norm.dot(&sol) <= 0.0 {
+            sol = sol * -1.;
+        }
+        sol
     }
 
     pub fn rot_z(&self, degree: f32) -> Self{
@@ -159,6 +184,14 @@ impl Mul<f32> for Vec3{
     
     fn mul(self, rhs: f32) -> Self::Output {
         &self * &rhs
+    }
+}
+
+impl Mul for &Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Vec3::new(self.x * rhs.x, self.y * rhs.y, self.z * rhs.z)
     }
 }
 
