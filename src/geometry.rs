@@ -1,7 +1,5 @@
-use crate::vec3;
-use crate::render;
-use render::Pixel;
-use vec3::{Point, Vec3};
+use crate::vec3::{Point, Vec3};
+use crate::render::Pixel;
 pub struct HitInfo {
     pub p: Point,
     pub normal: Vec3,
@@ -38,22 +36,26 @@ impl Object {
         }
     }
     pub fn bounce(mut ray: Ray, objs: &Vec<Object>, count: u8) -> Pixel{
-        let mut light = Vec3::new(0., 0., 0.);
         let mut color = Vec3::new(1., 1., 1.);
-        for _ in 0..count {
+        for i in 0..count {
             let inter = Self::hit_all(&ray, &objs);
             match inter {
                 Some(hit) => {
                     ray.start = hit.p;
                     ray.dir = Vec3::random(&hit.normal);
-                    light = &light + &(&color * &hit.emmision) * &hit.color;
-                    color = &color * &hit.color;
+                    color = &color * 0.25;
 
                 }
-                _ => break,
+                _ => {
+                    if i == 0 {
+                        color = Vec3::new(1., 1., 1.).lerp(
+                            &Vec3::new(0.478, 0.859, 0.949), (ray.dir.z + 1.) / 2.);
+                    }
+                    break;
+                }
             }
         }
-        Pixel::new((light.x * 255.) as u8, (light.y * 255.) as u8, (light.z * 255.) as u8)
+        Pixel::new((color.x * 255.) as u8, (color.y * 255.) as u8, (color.z * 255.) as u8)
     }
     
     pub fn hit_all(ray: &Ray, lis: &Vec<Self>) -> Option<HitInfo>{

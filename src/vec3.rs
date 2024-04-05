@@ -45,17 +45,18 @@ impl Vec3 {
         let mut rng = rand::thread_rng();
         let mut c: u8 = 0;
         let mut sol = Self::new(0., 0., 0.);
-        while true && c <= 50 {
+        while c < 50 {
             let x = rng.gen_range(-1.0..1.0);
             let y = rng.gen_range(-1.0..1.0);
             let z = rng.gen_range(-1.0..1.0);
             sol = Self {x, y, z};
             if sol.length_squared() <= 1. {
+                sol = sol.normalize();
                 break;
             }
             c += 1;
         }
-        if norm.dot(&sol) <= 0.0 {
+        if norm.dot(&sol) < 0.0 {
             sol = sol * -1.;
         }
         sol
