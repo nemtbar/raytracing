@@ -1,7 +1,7 @@
 use std::ops::{Add, Div, Mul, Sub};
 use rand::Rng;
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, PartialEq)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -9,7 +9,6 @@ pub struct Vec3 {
 }
 
 pub type Point = Vec3;
-
 impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Self{
         Vec3{x, y, z}

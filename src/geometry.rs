@@ -28,7 +28,7 @@ impl Object {
                     } else {
                         let thc = (rad2 - d).sqrt();
                         let t0 = tc - thc;
-                        let normal = (&ray.dir * t0 - pos) / rad;
+                        let normal = (&ray.dir * t0 - pos).normalize();
                         Some(HitInfo{p: &ray.dir * t0, normal, color: col.clone(), emmision: emmision.clone()})
                     }
                 }
@@ -43,7 +43,7 @@ impl Object {
                 Some(hit) => {
                     ray.start = hit.p;
                     ray.dir = Vec3::random(&hit.normal);
-                    color = &color * 0.25;
+                    color = &color * 0.75;
 
                 }
                 _ => {
