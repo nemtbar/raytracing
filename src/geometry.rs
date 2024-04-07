@@ -53,7 +53,7 @@ impl Object {
                 Some(hit) => {
                     ray.start = hit.p;
                     ray.dir = Vec3::random(&hit.normal);
-                    color = color * 0.75;
+                    color = color * 0.5;
 
                 }
                 _ => {
