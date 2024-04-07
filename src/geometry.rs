@@ -8,7 +8,8 @@ pub struct HitInfo {
 }
 
 pub enum Object {
-    Sphere {pos: Vec3, col: Vec3, rad: f32, emmision: f32}
+    Sphere {pos: Vec3, col: Vec3, rad: f32, emmision: f32},
+    Plane {pos: Vec3, normal: Vec3, col: Vec3}
 }
 
 impl Object {
@@ -33,6 +34,15 @@ impl Object {
                     }
                 }
             }
+            Self::Plane { pos, normal, col} => {
+                //https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection.html
+                let t = (ray.start.dot(normal) + (&ray.start - pos).length()) * -1./ray.dir.dot(normal);
+                if t > 0. {
+                    let p = &ray.start + &ray.dir * t;
+                    return Some(HitInfo{p, normal: normal.clone(), color: col.clone(), emmision: 0.});
+                }
+                None
+            }
         }
     }
     pub fn bounce(mut ray: Ray, objs: &Vec<Object>, count: u8) -> Pixel{
@@ -43,7 +53,7 @@ impl Object {
                 Some(hit) => {
                     ray.start = hit.p;
                     ray.dir = Vec3::random(&hit.normal);
-                    color = &color * 0.75;
+                    color = color * 0.75;
 
                 }
                 _ => {
