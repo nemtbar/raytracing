@@ -34,9 +34,11 @@ impl Object {
                     }
                 }
             }
-            Self::Plane { pos, normal, col} => {
-                //https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection.html
-                let t = (ray.start.dot(normal) + (&ray.start - pos).length()) * -1./ray.dir.dot(normal);
+            Self::Plane {pos, normal, col} => {
+                //https://www.cs.princeton.edu/courses/archive/fall00/cs426/lectures/raycast/sld017.htm
+                //pos-vec dot normal = 0
+                let mut t = pos.dot(normal) - &ray.start.dot(normal);
+                t /= ray.dir.dot(normal);
                 if t > 0. {
                     let p = &ray.start + &ray.dir * t;
                     return Some(HitInfo{p, normal: normal.clone(), color: col.clone(), emmision: 0.});
@@ -45,20 +47,22 @@ impl Object {
             }
         }
     }
-    pub fn bounce(mut ray: Ray, objs: &Vec<Object>, count: u8) -> Pixel{
+    pub fn bounce(mut ray: Ray, objs: &Vec<Object>, max_bounce: u8) -> Pixel{
         let mut color = Vec3::new(1., 1., 1.);
-        for i in 0..count {
+        for i in 0..max_bounce {
             let inter = Self::hit_all(&ray, &objs);
             match inter {
                 Some(hit) => {
+                    if i != 0 {
+                        color = color * (0.05/(&ray.start - &hit.p).length()).min(1.).max(0.4);
+                    }
                     ray.start = hit.p;
                     ray.dir = Vec3::random(&hit.normal);
-                    color = color * 0.5;
 
                 }
                 _ => {
                     if i == 0 {
-                        color = Vec3::new(1., 1., 1.).lerp(
+                        color = color.lerp(
                             &Vec3::new(0.478, 0.859, 0.949), (ray.dir.z + 1.) / 2.);
                     }
                     break;
