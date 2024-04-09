@@ -16,8 +16,8 @@ fn frag(x: usize, y: usize, width: usize, height: usize) -> Pixel{
     let ux = (x as f32) / (width as f32) * (g  * 2.)- g;
     let uy = ((y as f32) / (height as f32) * (g * 2.) - g) * -1.;
     //define important points
-    let mut camera: Point = Vec3::new(0., -5., 0.);
-    let mut dir = (Vec3::new(ux, camera.y+1., uy)-&camera).normalize();
+    let camera: Point = Vec3::new(0., -5., 0.);
+    let dir = (Vec3::new(ux, camera.y+1., uy)-&camera).normalize();
     //camera = camera.rot_x(-20.);
     //dir = dir.rot_x(-20.);
     let ray = Ray::new(camera.clone(), dir.clone());
