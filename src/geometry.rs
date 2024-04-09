@@ -49,16 +49,23 @@ impl Object {
     }
     pub fn bounce(mut ray: Ray, objs: &Vec<Object>, max_bounce: u8) -> Pixel{
         let mut color: Vec3 = Vec3::new(1., 1., 1.);
-        for _ in 0..max_bounce {
+        for i in 0..max_bounce {
             let inter = Self::hit_all(&ray, &objs);
             match inter {
                 Some(hit) => {
-                    color = &color * &hit.color * (0.01/(&hit.p - &ray.start).length()).max(0.2).min(1.);
+                    if i != 0 {
+                        color = &color * &hit.color * (0.01/(&hit.p - &ray.start).length()).max(0.2).min(1.);
+                    }
                     ray.start = hit.p;
                     ray.dir = Vec3::random(&hit.normal);
 
                 }
-                _ => break
+                _ => {
+                    if i == 0 {
+                        color = color.lerp(&Vec3::new(0.478, 0.859, 0.949), (ray.dir.z + 1.) / 2.)
+                    }
+                    break;
+                }
             }
         }
         Pixel::new((color.x * 255.) as u8, (color.y * 255.) as u8, (color.z * 255.) as u8)
