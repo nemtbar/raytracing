@@ -34,36 +34,34 @@ impl Object {
                     }
                 }
             }
-            Self::Plane {pos, normal, col} => {
+            Self::Plane {pos, normal, col, emmision} => {
                 //https://www.cs.princeton.edu/courses/archive/fall00/cs426/lectures/raycast/sld017.htm
                 //pos-vec dot normal = 0
                 let mut t = pos.dot(normal) - &ray.start.dot(normal);
                 t /= ray.dir.dot(normal);
                 if t > 0. {
                     let p = &ray.start + &ray.dir * t;
-                    return Some(HitInfo{p, normal: normal.clone(), color: col.clone(), emmision: 0.});
+                    return Some(HitInfo{p, normal: normal.clone(), color: col.clone(), emmision: emmision.clone()});
                 }
                 None
             }
         }
     }
-    pub fn bounce(mut ray: Ray, objs: &Vec<Object>, count: u8) -> Pixel{
-        let mut color: Vec3;
-        let mut light = Vec3::default();
-        for _ in 0..count {
+    pub fn bounce(mut ray: Ray, objs: &Vec<Object>, max_bounce: u8) -> Pixel{
+        let mut color: Vec3 = Vec3::new(1., 1., 1.);
+        for _ in 0..max_bounce {
             let inter = Self::hit_all(&ray, &objs);
             match inter {
                 Some(hit) => {
+                    color = &color * &hit.color * (0.01/(&hit.p - &ray.start).length()).max(0.2).min(1.);
                     ray.start = hit.p;
                     ray.dir = Vec3::random(&hit.normal);
-                    color = hit.color;
-                    light = &light + &color * &hit.emmision;
 
                 }
                 _ => break
             }
         }
-        Pixel::new((light.x * 255.) as u8, (light.y * 255.) as u8, (light.z * 255.) as u8)
+        Pixel::new((color.x * 255.) as u8, (color.y * 255.) as u8, (color.z * 255.) as u8)
     }
    
     
