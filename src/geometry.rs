@@ -53,9 +53,13 @@ impl Object {
             let inter = Self::hit_all(&ray, &objs);
             match inter {
                 Some(hit) => {
-                    if i != 0 {
-                        color = &color * &hit.color * (0.01/(&hit.p - &ray.start).length()).max(0.2).min(1.);
+                    let len = (&hit.p - &ray.start).length();
+                    if len < 0.001 {
+                        color = Vec3::new(0., 0., 0.);
+                        break;
                     }
+                    
+                    color = &color * &hit.color * (0.02/len).max(0.2).min(1.);
                     ray.start = hit.p;
                     ray.dir = Vec3::random(&hit.normal);
 
