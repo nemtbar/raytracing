@@ -2,10 +2,7 @@ use std::fs::File;
 use std::io::{self, Write};
 use crate::vec3;
 use vec3::Vec3;
-const WIDTH: usize = 500;
-const HEIGHT: usize = 500;
-
-
+use crate::{WIDTH, HEIGHT};
 #[derive(Clone, Copy, Default)]
 pub struct Pixel{
     pub r: u8,
@@ -38,11 +35,11 @@ impl Image{
         Self{ pixels: [[Pixel::default(); WIDTH]; HEIGHT] }
     }
 
-    pub fn new_with_method(method: impl Fn(usize, usize, usize, usize) -> Pixel) -> Self{
+    pub fn new_with_method(method: impl Fn(usize, usize) -> Pixel) -> Self{
         let mut image = Self::new();
         for row in 0..HEIGHT{
             for col in 0..WIDTH{
-                image.pixels[row][col] = method(col, row, WIDTH, HEIGHT);
+                image.pixels[row][col] = method(col, row);
             }
         }
         image

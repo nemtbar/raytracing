@@ -9,7 +9,7 @@ pub struct HitInfo {
 
 pub enum Object {
     Sphere {pos: Vec3, col: Vec3, rad: f32, emmision: f32},
-    Plane {pos: Vec3, normal: Vec3, col: Vec3}
+    Plane {pos: Vec3, normal: Vec3, col: Vec3, emmision: f32}
 }
 
 impl Object {
@@ -34,21 +34,21 @@ impl Object {
                     }
                 }
             }
-            Self::Plane {pos, normal, col} => {
+            Self::Plane {pos, normal, col, emmision} => {
                 //https://www.cs.princeton.edu/courses/archive/fall00/cs426/lectures/raycast/sld017.htm
                 //pos-vec dot normal = 0
                 let mut t = pos.dot(normal) - &ray.start.dot(normal);
                 t /= ray.dir.dot(normal);
                 if t > 0. {
                     let p = &ray.start + &ray.dir * t;
-                    return Some(HitInfo{p, normal: normal.clone(), color: col.clone(), emmision: 0.});
+                    return Some(HitInfo{p, normal: normal.clone(), color: col.clone(), emmision: emmision.clone()});
                 }
                 None
             }
         }
     }
     pub fn bounce(mut ray: Ray, objs: &Vec<Object>, count: u8) -> Pixel{
-        let mut color: Vec3;
+        let mut color: Vec3 = Vec3::new(1., 1., 1.);
         let mut light = Vec3::default();
         for _ in 0..count {
             let inter = Self::hit_all(&ray, &objs);
@@ -56,8 +56,8 @@ impl Object {
                 Some(hit) => {
                     ray.start = hit.p;
                     ray.dir = Vec3::random(&hit.normal);
-                    color = hit.color;
                     light = &light + &color * &hit.emmision;
+                    color = hit.color;
 
                 }
                 _ => break
