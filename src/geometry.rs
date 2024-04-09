@@ -9,7 +9,7 @@ pub struct HitInfo {
 
 pub enum Object {
     Sphere {pos: Vec3, col: Vec3, rad: f32, emmision: f32},
-    Plane {pos: Vec3, normal: Vec3, col: Vec3}
+    Plane {pos: Vec3, normal: Vec3, col: Vec3, emmision: f32}
 }
 
 impl Object {
@@ -47,30 +47,25 @@ impl Object {
             }
         }
     }
-    pub fn bounce(mut ray: Ray, objs: &Vec<Object>, max_bounce: u8) -> Pixel{
-        let mut color = Vec3::new(1., 1., 1.);
-        for i in 0..max_bounce {
+    pub fn bounce(mut ray: Ray, objs: &Vec<Object>, count: u8) -> Pixel{
+        let mut color: Vec3;
+        let mut light = Vec3::default();
+        for _ in 0..count {
             let inter = Self::hit_all(&ray, &objs);
             match inter {
                 Some(hit) => {
-                    if i != 0 {
-                        color = color * (0.05/(&ray.start - &hit.p).length()).min(1.).max(0.4);
-                    }
                     ray.start = hit.p;
                     ray.dir = Vec3::random(&hit.normal);
+                    color = hit.color;
+                    light = &light + &color * &hit.emmision;
 
                 }
-                _ => {
-                    if i == 0 {
-                        color = color.lerp(
-                            &Vec3::new(0.478, 0.859, 0.949), (ray.dir.z + 1.) / 2.);
-                    }
-                    break;
-                }
+                _ => break
             }
         }
-        Pixel::new((color.x * 255.) as u8, (color.y * 255.) as u8, (color.z * 255.) as u8)
+        Pixel::new((light.x * 255.) as u8, (light.y * 255.) as u8, (light.z * 255.) as u8)
     }
+   
     
     pub fn hit_all(ray: &Ray, lis: &Vec<Self>) -> Option<HitInfo>{
         let mut inf: Option<HitInfo> = None;
