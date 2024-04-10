@@ -58,7 +58,7 @@ impl Vec3 {
         if norm.dot(&sol) < 0.0 {
             sol = sol * -1.;
         }
-        assert!(norm.dot(&sol)> 0.0);
+        assert!(norm.dot(&sol) >= 0.0);
         sol
     }
 

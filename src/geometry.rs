@@ -54,12 +54,14 @@ impl Object {
             match inter {
                 Some(hit) => {
                     let len = (&hit.p - &ray.start).length();
-                    if len < 0.001 {
-                        color = Vec3::new(0., 0., 0.);
-                        break;
+                    if i != 0 {
+                        color = &color * &(&hit.color * (len/4.).max(0.3).min(1.));
+                    } else {
+                        color = hit.color;
+                        if len < 0.001 {
+                            break;
+                        }
                     }
-                    
-                    color = &color * &hit.color * (0.02/len).max(0.2).min(1.);
                     ray.start = hit.p;
                     ray.dir = Vec3::random(&hit.normal);
 
