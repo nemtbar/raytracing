@@ -4,19 +4,18 @@ pub struct HitInfo {
     pub p: Point,
     pub normal: Vec3,
     pub color: Vec3,
-    pub emmision: f32
 }
 
 pub enum Object {
-    Sphere {pos: Vec3, col: Vec3, rad: f32, emmision: f32},
-    Plane {pos: Vec3, normal: Vec3, col: Vec3, emmision: f32}
+    Sphere {pos: Vec3, col: Vec3, rad: f32},
+    Plane {pos: Vec3, normal: Vec3, col: Vec3}
 }
 
 impl Object {
     fn intersect(&self, ray: &Ray) -> Option<HitInfo>{
         match self {
             //https://kylehalladay.com/blog/tutorial/math/2013/12/24/Ray-Sphere-Intersection.html
-            Self::Sphere {pos, col, rad, emmision} => {
+            Self::Sphere {pos, col, rad} => {
                 let l = pos - &ray.start;
                 let tc = l.dot(&ray.dir);
                 if tc < 0.0{
@@ -30,11 +29,11 @@ impl Object {
                         let thc = (rad2 - d).sqrt();
                         let t0 = tc - thc;
                         let normal = (&ray.dir * t0 - pos).normalize();
-                        Some(HitInfo{p: &ray.dir * t0, normal, color: col.clone(), emmision: emmision.clone()})
+                        Some(HitInfo{p: &ray.dir * t0, normal, color: col.clone()})
                     }
                 }
             }
-            Self::Plane {pos, normal, col, emmision} => {
+            Self::Plane {pos, normal, col} => {
                 //https://www.cs.princeton.edu/courses/archive/fall00/cs426/lectures/raycast/sld017.htm
                 //pos-vec dot normal = 0
                 let mut n = normal.clone();
@@ -45,7 +44,7 @@ impl Object {
                 t /= ray.dir.dot(&n);
                 if t > 0. {
                     let p = &ray.start + &ray.dir * t;
-                    return Some(HitInfo{p, normal: n, color: col.clone(), emmision: emmision.clone()});
+                    return Some(HitInfo{p, normal: n, color: col.clone(), });
                 }
                 None
             }
