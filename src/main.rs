@@ -25,8 +25,8 @@ fn frag(x: usize, y: usize) -> Pixel{
         Object::Sphere {pos: Vec3::new(-3., 1., 0.7), col: Vec3::new(1., 1., 1.), rad: 1., emmision: 0.},
         Object::Plane {pos: Vec3::new(0., 0., -0.5), normal: Vec3::new(0., 0., 1.), col: Vec3::new(1., 1., 1.), emmision: 0.},
         //Object::Sphere {pos: Vec3::new(0., 0., -40.), col: Vec3::new(1., 1., 1.), rad: 39., emmision: 0.},
-        Object::Sphere {pos: Vec3::new(0., 0., 1.7), col: Vec3::new(1., 0., 0.), rad: 2., emmision: 0.0},
-        Object::Plane {pos: Vec3::new(0., 0., 20.), normal: Vec3::new(0., 0., -1.), col: Vec3::new(1., 1., 1.), emmision: 2.}
+        Object::Sphere {pos: Vec3::new(0., 0., 1.7), col: Vec3::new(1., 0., 0.), rad: 2., emmision: 1.0},
+        //Object::Plane {pos: Vec3::new(0., 0., 20.), normal: Vec3::new(0., 0., -1.), col: Vec3::new(1., 1., 1.), emmision: 2.}
     ];
     let mut col = Pixel::default();
     let c = 10;
