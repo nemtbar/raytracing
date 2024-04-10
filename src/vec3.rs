@@ -40,7 +40,7 @@ impl Vec3 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
-    pub fn random(norm: &Self) -> Self {
+    pub fn random() -> Self {
         let mut rng = rand::thread_rng();
         let mut c: u8 = 0;
         let mut sol = Self::new(0., 0., 0.);
@@ -54,9 +54,6 @@ impl Vec3 {
                 break;
             }
             c += 1;
-        }
-        if norm.dot(&sol) < 0.0 {
-            sol = sol * -1.;
         }
         sol
     }

@@ -54,8 +54,9 @@ impl Object {
             let inter = Self::hit_all(&ray, &objs);
             match inter {
                 Some(hit) => {
+                    let poi = &hit.p + hit.normal;
+                    ray.dir = (Vec3::random() - poi).normalize();
                     ray.start = hit.p;
-                    ray.dir = Vec3::random(&hit.normal);
                     light = &light + &color * &hit.emmision;
                     color = hit.color;
 
