@@ -19,7 +19,7 @@ fn frag(x: usize, y: usize, width: usize, height: usize) -> Pixel{
     let camera: Point = Vec3::new(0., -5., 0.);
     let objects: Vec<Object> = vec![
         Object::Sphere {pos: Vec3::new(-3., 1., 0.), col: Vec3::new(0., 1., 0.), rad: 1., emmision: 0.},
-        Object::Plane { pos: Vec3::new(0., 0., -1.5), normal: Vec3::new(0., 0., 1.), col: Vec3::new(1., 1., 1.), emmision: 0.},
+        Object::Plane { pos: Vec3::new(0., 0., -1.5), normal: Vec3::new(0., 0., -1.), col: Vec3::new(1., 1., 1.), emmision: 0.},
         //Object::Sphere {pos: Vec3::new(0., 0., -40.), col: Vec3::new(1., 1., 1.), rad: 39., emmision: 0.},
         Object::Sphere {pos: Vec3::new(0., 0., 1.2), col: Vec3::new(1., 0., 0.), rad: 2., emmision: 0.3}
     ];
@@ -27,7 +27,7 @@ fn frag(x: usize, y: usize, width: usize, height: usize) -> Pixel{
     let c = 10;
     let b = 30;
     let mut rng = rand::thread_rng();
-    let offset: f32 = 0.005;
+    let offset: f32 = 0.002;
     for i in 0..c{
         let rand_x = rng.gen_range(-offset..offset);
         let rand_y = rng.gen_range(-offset..offset);

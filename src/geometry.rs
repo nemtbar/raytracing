@@ -37,11 +37,15 @@ impl Object {
             Self::Plane {pos, normal, col, emmision} => {
                 //https://www.cs.princeton.edu/courses/archive/fall00/cs426/lectures/raycast/sld017.htm
                 //pos-vec dot normal = 0
-                let mut t = pos.dot(normal) - &ray.start.dot(normal);
-                t /= ray.dir.dot(normal);
+                let mut n = normal.clone();
+                if ray.dir.dot(normal) > 0. {
+                    n = normal * -1.;
+                }
+                let mut t = pos.dot(&n) - &ray.start.dot(&n);
+                t /= ray.dir.dot(&n);
                 if t > 0. {
                     let p = &ray.start + &ray.dir * t;
-                    return Some(HitInfo{p, normal: normal.clone(), color: col.clone(), emmision: emmision.clone()});
+                    return Some(HitInfo{p, normal: n, color: col.clone(), emmision: emmision.clone()});
                 }
                 None
             }
@@ -62,8 +66,10 @@ impl Object {
                     } else {
                         color = hit.color;
                     }
+                    //lambertian reflection
+                    let poi = &hit.p + &hit.normal;
+                    ray.dir = (poi+Vec3::random() - &hit.p).normalize();
                     ray.start = hit.p;
-                    ray.dir = Vec3::random(&hit.normal);
 
                 }
                 _ => {
