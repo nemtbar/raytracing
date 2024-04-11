@@ -58,7 +58,7 @@ impl Object {
                         break;
                     }
                     if i != 0 {
-                        color = &color * &(&hit.color * (len/4.).max(0.3).min(0.8));
+                        color = &color * &(&hit.color * (len/10.).max(0.3).min(0.8));
                     } else {
                         color = hit.color;
                     }
