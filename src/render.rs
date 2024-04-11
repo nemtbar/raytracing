@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::{self, Write};
+use image::{RgbImage, ImageBuffer, Rgb};
 use crate::vec3;
 use vec3::Vec3;
 const WIDTH: usize = 500;

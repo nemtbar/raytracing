@@ -17,7 +17,7 @@ impl Object {
             //https://kylehalladay.com/blog/tutorial/math/2013/12/24/Ray-Sphere-Intersection.html
             Self::Sphere {pos, col, rad} => {
                 let l = pos - &ray.start;
-                let tc = l.dot(&ray.dir);
+                let tc = l.dot(&ray.dir.normalize());
                 if tc < 0.0{
                     None
                 } else {
@@ -28,8 +28,8 @@ impl Object {
                     } else {
                         let thc = (rad2 - d).sqrt();
                         let t0 = tc - thc;
-                        let normal = (&ray.dir * t0 - pos) / rad;
-                        Some(HitInfo{p: &ray.dir * t0, normal, color: col.clone()})
+                        let normal = (&ray.dir.normalize() * t0 - pos) / rad;
+                        Some(HitInfo{p: &ray.dir.normalize() * t0, normal, color: col.clone()})
                     }
                 }
             }
@@ -61,13 +61,14 @@ impl Object {
                         break;
                     }
                     if i != 0 {
-                        color = &color * &(&hit.color * (len/4.).max(0.3).min(1.));
+                        color = &color * &(&hit.color * (len/4.).max(0.3).min(0.8));
                     } else {
                         color = hit.color;
                     }
                     //lambertian reflection
                     let poi = &hit.p + &hit.normal;
-                    ray.dir = (poi+Vec3::random() - &hit.p).normalize();
+                    //ray.dir = (poi+Vec3::random() - &hit.p).normalize();
+                    ray.dir = hit.normal;
                     ray.start = hit.p;
 
                 }
