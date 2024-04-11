@@ -13,38 +13,35 @@ pub enum Object {
 
 impl Object {
     fn intersect(&self, ray: &Ray) -> Option<HitInfo>{
+        assert!(ray.dir.length() > 0.99 && ray.dir.length() < 1.01);
         match self {
             //https://kylehalladay.com/blog/tutorial/math/2013/12/24/Ray-Sphere-Intersection.html
             Self::Sphere {pos, col, rad} => {
-                let l = pos - &ray.start;
-                let tc = l.dot(&ray.dir.normalize());
-                if tc < 0.0{
+                let camera_self = pos - &ray.start;
+                let project = camera_self.dot(&ray.dir);
+                if project < 0.0{
                     None
                 } else {
-                    let d = l.length_squared()-tc*tc;
+                    let closest = camera_self.length_squared()-project*project;
                     let rad2 = rad * rad;
-                    if d > rad2{
+                    if closest > rad2{
                         None
                     } else {
-                        let thc = (rad2 - d).sqrt();
-                        let t0 = tc - thc;
-                        let normal = (&ray.dir.normalize() * t0 - pos) / rad;
-                        Some(HitInfo{p: &ray.dir.normalize() * t0, normal, color: col.clone()})
+                        let thc = (rad2 - closest).sqrt();
+                        let inters = project - thc;
+                        let normal = (&ray.dir * inters - pos).normalize();
+                        Some(HitInfo{p: &ray.dir * inters, normal, color: col.clone()})
                     }
                 }
             }
             Self::Plane {pos, normal, col} => {
                 //https://www.cs.princeton.edu/courses/archive/fall00/cs426/lectures/raycast/sld017.htm
                 //pos-vec dot normal = 0
-                let mut n = normal.clone();
-                if ray.dir.dot(normal) > 0. {
-                    n = normal * -1.;
-                }
-                let mut t = pos.dot(&n) - &ray.start.dot(&n);
-                t /= ray.dir.dot(&n);
+                let mut t = pos.dot(&normal) - &ray.start.dot(&normal);
+                t /= ray.dir.dot(&normal);
                 if t > 0. {
                     let p = &ray.start + &ray.dir * t;
-                    return Some(HitInfo{p, normal: n, color: col.clone(), });
+                    return Some(HitInfo{p, normal: normal.clone(), color: col.clone(), });
                 }
                 None
             }
