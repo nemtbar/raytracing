@@ -2,19 +2,21 @@ mod vec3;
 mod render;
 mod geometry;
 use vec3::{Vec3, Point};
-use render::{Pixel, Image};
+use render::{Pixel, display};
 use geometry::{Object, Ray};
 use rand::Rng;
+pub const WIDTH: usize = 500;
+pub const HEIGHT: usize = 500;
 //https://raytracing.github.io/books/RayTracingInOneWeekend.html
 
 
 
 //fragment shader -> runs for every pixel
-fn frag(x: usize, y: usize, width: usize, height: usize) -> Pixel{
+fn frag(x: usize, y: usize) -> Pixel{
     //uv coordinates between -g->g
     let g = 1.;
-    let ux = (x as f32) / (width as f32) * (g  * 2.)- g;
-    let uy = ((y as f32) / (height as f32) * (g * 2.) - g) * -1.;
+    let ux = (x as f32) / (WIDTH as f32) * (g  * 2.)- g;
+    let uy = ((y as f32) / (HEIGHT as f32) * (g * 2.) - g) * -1.;
     let mut camera: Point = Vec3::new(0., -5., 0.);
     let objects: Vec<Object> = vec![
         Object::Sphere {pos: Vec3::new(-3., 1., 0.), col: Vec3::new(1., 1., 1.), rad: 1.},
@@ -48,6 +50,5 @@ fn frag(x: usize, y: usize, width: usize, height: usize) -> Pixel{
 }
 
 fn main(){
-    let sample = Image::new_with_method(frag);
-    sample.display().unwrap(); 
+    display(frag)
 }

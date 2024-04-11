@@ -67,8 +67,7 @@ impl Object {
                     }
                     //lambertian reflection
                     let poi = &hit.p + &hit.normal;
-                    //ray.dir = (poi+Vec3::random() - &hit.p).normalize();
-                    ray.dir = hit.normal;
+                    ray.dir = (poi+Vec3::random() - &hit.p).normalize();
                     ray.start = hit.p;
 
                 }
