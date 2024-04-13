@@ -27,8 +27,8 @@ impl Object {
                     if closest > rad2{
                         None
                     } else {
-                        let thc = (rad2 - closest).sqrt();
-                        let inters = project_len - thc;
+                        let t1c = (rad2 - closest).sqrt();
+                        let inters = project_len - t1c;
                         let normal = (&ray.dir * inters - pos).normalize();
                         Some(HitInfo{p: &ray.dir * inters, normal, color: col.clone()})
                     }
@@ -68,6 +68,7 @@ impl Object {
                     //lambertian reflection
                     let poi = &hit.p + &hit.normal;
                     ray.dir = (poi+Vec3::random() - &hit.p).normalize();
+                    ray.dir = hit.normal;
                     ray.start = hit.p;
 
                 }
