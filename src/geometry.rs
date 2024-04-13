@@ -37,14 +37,11 @@ impl Object {
             Self::Plane {pos, normal, col} => {
                 //https://www.cs.princeton.edu/courses/archive/fall00/cs426/lectures/raycast/sld017.htm
                 //pos-vec dot normal = 0
-                let mut n = normal.clone();
-                if normal.dot(&ray.dir) > 0. {
-                    n = normal * -1.;
-                }
-                let t = (pos.dot(&n) - &ray.start.dot(&n)) / ray.dir.dot(&n);
+                let denom = normal.dot(&ray.dir);
+                let t = (pos - &ray.start).dot(normal) / denom;
                 if t > 0. {
-                    let p = &ray.start + &ray.dir * t;
-                    return Some(HitInfo{p, normal: n.clone(), color: col.clone(), });
+                    let hit = HitInfo{p: &ray.start + &ray.dir * t, normal: normal.clone(), color: col.clone()};
+                    return Some(hit);
                 }
                 None
             }
@@ -57,7 +54,7 @@ impl Object {
             match inter {
                 Some(hit) => {
                     let len = (&hit.p - &ray.start).length();
-                    if len < 0.001 {
+                    if len < 0.0001 {
                         break;
                     }
                     if i != 0 {

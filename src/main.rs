@@ -28,7 +28,7 @@ fn frag(x: usize, y: usize) -> Pixel{
     let c = 10;
     let b = 10;
     let mut rng = rand::thread_rng();
-    let offset: f32 = 0.01;
+    let offset: f32 = 0.005;
     for i in 0..c{
         let rand_x = rng.gen_range(-offset..offset);
         let rand_y = rng.gen_range(-offset..offset);
