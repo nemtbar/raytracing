@@ -13,22 +13,22 @@ pub enum Object {
 
 impl Object {
     fn intersect(&self, ray: &Ray) -> Option<HitInfo>{
-        assert!(ray.dir.length() > 0.99 && ray.dir.length() < 1.01);
+        assert!(ray.dir.length() > 0.999 && ray.dir.length() < 1.001);
         match self {
             //https://kylehalladay.com/blog/tutorial/math/2013/12/24/Ray-Sphere-Intersection.html
             Self::Sphere {pos, col, rad} => {
                 let camera_self = pos - &ray.start;
-                let project = camera_self.dot(&ray.dir);
-                if project < 0.0{
+                let project_len = camera_self.dot(&ray.dir);
+                if project_len < 0.0{
                     None
                 } else {
-                    let closest = camera_self.length_squared()-project*project;
+                    let closest = camera_self.length_squared()-project_len*project_len;
                     let rad2 = rad * rad;
                     if closest > rad2{
                         None
                     } else {
                         let thc = (rad2 - closest).sqrt();
-                        let inters = project - thc;
+                        let inters = project_len - thc;
                         let normal = (&ray.dir * inters - pos).normalize();
                         Some(HitInfo{p: &ray.dir * inters, normal, color: col.clone()})
                     }
@@ -37,11 +37,14 @@ impl Object {
             Self::Plane {pos, normal, col} => {
                 //https://www.cs.princeton.edu/courses/archive/fall00/cs426/lectures/raycast/sld017.htm
                 //pos-vec dot normal = 0
-                let mut t = pos.dot(&normal) - &ray.start.dot(&normal);
-                t /= ray.dir.dot(&normal);
+                let mut n = normal.clone();
+                if normal.dot(&ray.dir) > 0. {
+                    n = normal * -1.;
+                }
+                let t = (pos.dot(&n) - &ray.start.dot(&n)) / ray.dir.dot(&n);
                 if t > 0. {
                     let p = &ray.start + &ray.dir * t;
-                    return Some(HitInfo{p, normal: normal.clone(), color: col.clone(), });
+                    return Some(HitInfo{p, normal: n.clone(), color: col.clone(), });
                 }
                 None
             }
@@ -58,7 +61,7 @@ impl Object {
                         break;
                     }
                     if i != 0 {
-                        color = &color * &(&hit.color * (len/10.).max(0.3).min(0.8));
+                        color = &color * &(&hit.color * (len/4.).max(0.3).min(0.8));
                     } else {
                         color = hit.color;
                     }
