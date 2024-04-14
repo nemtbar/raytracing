@@ -19,9 +19,9 @@ fn frag(x: usize, y: usize) -> Pixel{
     let uy = ((y as f32) / (HEIGHT as f32) * (g * 2.) - g) * -1.;
     let camera: Point = Vec3::new(0., -5., 0.);
     let objects: Vec<Object> = vec![
-        Object::Sphere {pos: Vec3::new(-3., 1., 0.), col: Vec3::new(1., 1., 1.), rad: 1., mat: Material::Diffuse()},
+        Object::Sphere {pos: Vec3::new(-2., 0., 0.), col: Vec3::new(1., 1., 1.), rad: 1., mat: Material::Diffuse()},
         Object::Plane {pos: Vec3::new(0., 0., -1.), normal: Vec3::new(0., 0., 1.), col: Vec3::new(1., 1., 1.), mat: Material::Diffuse()},
-        //Object::Sphere {pos: Vec3::new(0., 0., -40.), col: Vec3::new(1., 1., 1.), rad: 39.},
+        Object::Sphere {pos: Vec3::new(2., -1., 0.), col: Vec3::new(1., 1., 1.), rad: 1., mat: Material::Diffuse()},
         Object::Sphere {pos: Vec3::new(0., 0., 0.0), col: Vec3::new(1., 0., 0.), rad: 1., mat: Material::Reflective()}
     ];
     let mut col = Pixel::default();
