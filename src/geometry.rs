@@ -4,11 +4,43 @@ pub struct HitInfo {
     pub p: Point,
     pub normal: Vec3,
     pub color: Vec3,
+    pub reflection: Material
 }
 
+#[derive(Clone)]
+pub enum Material {
+    Diffuse (),
+    Reflective ()
+}
+fn mix(col1: &Vec3, col2: &Vec3, mat: &Material, len: f32) -> Vec3 {
+    match mat {
+        Material::Diffuse() => {
+            col1 * &(col2 * (len/2.).max(0.3).min(0.8))
+        }
+
+        _ => col1.clone()
+    }
+}
+
+fn scatter(ray: &Ray, hit: &HitInfo, mat: &Material) -> Ray {
+    let mut sol: Ray = Ray::new(hit.p.clone(), Vec3::default());
+    match mat {
+        Material::Diffuse() => {
+            //lambertian reflection
+            let poi = &hit.p + &hit.normal;
+            sol.dir = (poi+Vec3::random() - &hit.p).normalize();
+            //ray.dir = hit.normal;
+
+        }
+        Material::Reflective() => {
+            sol.dir = &hit.p + (&hit.normal - &ray.dir) * -2.;
+        }
+    }
+    sol
+}
 pub enum Object {
-    Sphere {pos: Vec3, col: Vec3, rad: f32},
-    Plane {pos: Vec3, normal: Vec3, col: Vec3}
+    Sphere {pos: Vec3, col: Vec3, rad: f32, mat: Material},
+    Plane {pos: Vec3, normal: Vec3, col: Vec3, mat: Material}
 }
 
 impl Object {
@@ -16,7 +48,7 @@ impl Object {
         assert!(ray.dir.length() > 0.999 && ray.dir.length() < 1.001);
         match self {
             //https://kylehalladay.com/blog/tutorial/math/2013/12/24/Ray-Sphere-Intersection.html
-            Self::Sphere {pos, col, rad} => {
+            Self::Sphere {pos, col, rad, mat} => {
                 let camera_self = pos - &ray.start;
                 let project_len = camera_self.dot(&ray.dir);
                 if project_len < 0.0{
@@ -30,17 +62,17 @@ impl Object {
                         let t1c = (rad2 - closest).sqrt();
                         let inters = project_len - t1c;
                         let normal = (&ray.dir * inters - pos).normalize();
-                        Some(HitInfo{p: &ray.start + &ray.dir * inters, normal, color: col.clone()})
+                        Some(HitInfo{p: &ray.start + &ray.dir * inters, normal, color: col.clone(), reflection: mat.clone()})
                     }
                 }
             }
-            Self::Plane {pos, normal, col} => {
+            Self::Plane {pos, normal, col, mat} => {
                 //https://www.cs.princeton.edu/courses/archive/fall00/cs426/lectures/raycast/sld017.htm
                 //pos-vec dot normal = 0
                 let denom = normal.dot(&ray.dir);
                 let t = (pos - &ray.start).dot(normal) / denom;
                 if t > 0. {
-                    let hit = HitInfo{p: &ray.start + &ray.dir * t, normal: normal.clone(), color: col.clone()};
+                    let hit = HitInfo{p: &ray.start + &ray.dir * t, normal: normal.clone(), color: col.clone(), reflection: mat.clone()};
                     return Some(hit);
                 }
                 None
@@ -57,21 +89,17 @@ impl Object {
                     if len < 0.001 {
                         break;
                     }
-                    if i != 0 {
-                        color = &color * &(&hit.color * (len/4.).max(0.3).min(0.8));
-                    } else {
-                        color = hit.color;
-                    }
+                    color = mix(&color, &hit.color, &hit.reflection, len);
+                    ray = scatter(&ray, &hit, &hit.reflection)
                     //lambertian reflection
-                    let poi = &hit.p + &hit.normal;
-                    ray.dir = (poi+Vec3::random() - &hit.p).normalize();
-                    //ray.dir = hit.normal;
-                    ray.start = hit.p;
-
+                    
                 }
                 _ => {
-                    if i == 0 {
-                        color = color.lerp(&Vec3::new(0.478, 0.859, 0.949), (ray.dir.z + 1.) / 2.)
+                    let sky = Vec3::new(1., 1., 1.).lerp(&Vec3::new(0.478, 0.859, 0.949), (ray.dir.z + 1.) / 2.);
+                    if i != 0 {
+                        color = mix(&color, &sky, &Material::Diffuse(), 100.);
+                    } else {
+                        color = sky;
                     }
                     break;
                 }
