@@ -30,7 +30,7 @@ impl Object {
                         let t1c = (rad2 - closest).sqrt();
                         let inters = project_len - t1c;
                         let normal = (&ray.dir * inters - pos).normalize();
-                        Some(HitInfo{p: &ray.dir * inters, normal, color: col.clone()})
+                        Some(HitInfo{p: &ray.start + &ray.dir * inters, normal, color: col.clone()})
                     }
                 }
             }
@@ -54,7 +54,7 @@ impl Object {
             match inter {
                 Some(hit) => {
                     let len = (&hit.p - &ray.start).length();
-                    if len < 0.0001 {
+                    if len < 0.001 {
                         break;
                     }
                     if i != 0 {
@@ -65,7 +65,7 @@ impl Object {
                     //lambertian reflection
                     let poi = &hit.p + &hit.normal;
                     ray.dir = (poi+Vec3::random() - &hit.p).normalize();
-                    ray.dir = hit.normal;
+                    //ray.dir = hit.normal;
                     ray.start = hit.p;
 
                 }

@@ -17,16 +17,16 @@ fn frag(x: usize, y: usize) -> Pixel{
     let g = 1.;
     let ux = (x as f32) / (WIDTH as f32) * (g  * 2.)- g;
     let uy = ((y as f32) / (HEIGHT as f32) * (g * 2.) - g) * -1.;
-    let camera: Point = Vec3::new(0., -2., 0.);
+    let camera: Point = Vec3::new(0., -5., 0.);
     let objects: Vec<Object> = vec![
         Object::Sphere {pos: Vec3::new(-3., 1., 0.), col: Vec3::new(1., 1., 1.), rad: 1.},
         Object::Plane {pos: Vec3::new(0., 0., -1.), normal: Vec3::new(0., 0., 1.), col: Vec3::new(1., 1., 1.)},
         //Object::Sphere {pos: Vec3::new(0., 0., -40.), col: Vec3::new(1., 1., 1.), rad: 39.},
-        Object::Sphere {pos: Vec3::new(0., 0., 0.0), col: Vec3::new(1., 1., 1.), rad: 1.}
+        Object::Sphere {pos: Vec3::new(0., 0., 0.0), col: Vec3::new(1., 0., 0.), rad: 1.}
     ];
     let mut col = Pixel::default();
-    let c = 10;
-    let b = 10;
+    let c = 30;
+    let b = 30;
     let mut rng = rand::thread_rng();
     let offset: f32 = 0.005;
     for i in 0..c{
