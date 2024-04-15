@@ -7,7 +7,7 @@ pub struct HitInfo {
     pub reflection: Material
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Material {
     Diffuse (),
     Reflective ()
@@ -15,7 +15,8 @@ pub enum Material {
 fn mix(col1: &Vec3, col2: &Vec3, mat: &Material, len: f32) -> Vec3 {
     match mat {
         Material::Diffuse() => {
-            col1 * &(col2 * (len/2.).max(0.3).min(1.))
+            let value = (len/1.3).min(1.);
+            col1.lerp(col2, value) * (len/3.).max(0.5).min(1.)
         }
 
         _ => col1.clone()
@@ -81,8 +82,7 @@ impl Object {
     }
     pub fn bounce(mut ray: Ray, objs: &Vec<Object>, max_bounce: u8) -> Pixel{
         let mut color: Vec3 = Vec3::new(1., 1., 1.);
-        let mut last_mat = Material::Diffuse();
-        for i in 0..max_bounce {
+        for _ in 0..max_bounce {
             let inter = Self::hit_all(&ray, &objs);
             match inter {
                 Some(hit) => {
@@ -90,17 +90,18 @@ impl Object {
                     if len < 0.001 {
                         break;
                     }
-                    last_mat = hit.reflection.clone();
+
                     color = mix(&color, &hit.color, &hit.reflection, len);
                     ray = scatter(&ray, &hit, &hit.reflection);
                 }
                 _ => {
                     let sky = Vec3::new(1., 1., 1.).lerp(&Vec3::new(0.478, 0.859, 0.949), (ray.dir.z + 1.) / 2.);
-                    if i == 0 {
+                    /*if i == 0 || mirror{
                         color = sky;
                     } else {
-                        color = mix(&sky, &color, &last_mat, 1000.);
-                    }
+                        color = mix(&color, &sky, &Material::Diffuse(), 1000.);
+                    }*/
+                    color = &color * &sky;
                     break;
                 }
             }
