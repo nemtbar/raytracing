@@ -1,5 +1,4 @@
 use crate::vec3::{Point, Vec3};
-use crate::render::Pixel;
 pub struct HitInfo {
     pub p: Point,
     pub normal: Vec3,
@@ -12,25 +11,14 @@ pub enum Material {
     Diffuse (),
     Reflective ()
 }
-fn mix(col1: &Vec3, col2: &Vec3, mat: &Material, len: f32) -> Vec3 {
-    match mat {
-        Material::Diffuse() => {
-            let value = (len/1.3).min(1.);
-            col1.lerp(col2, value) * (len/3.).max(0.5).min(1.)
-        }
 
-        _ => col1.clone()
-    }
-}
-
-fn scatter(ray: &Ray, hit: &HitInfo, mat: &Material) -> Ray {
-    let mut sol: Ray = Ray::new(hit.p.clone(), Vec3::default());
-    match mat {
+fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
+    let mut sol: Ray = Ray::new(hit.p.clone(), Vec3::new(0., 0., 0.));
+    match hit.reflection {
         Material::Diffuse() => {
             //lambertian reflection
             let poi = &hit.p + &hit.normal;
             sol.dir = (poi+Vec3::random() - &hit.p).normalize();
-            //ray.dir = hit.normal;
 
         }
         Material::Reflective() => {
@@ -46,7 +34,7 @@ pub enum Object {
 
 impl Object {
     fn intersect(&self, ray: &Ray) -> Option<HitInfo>{
-        assert!(ray.dir.length() > 0.999 && ray.dir.length() < 1.001);
+        //assert!(ray.dir.length() > 0.999 && ray.dir.length() < 1.001);
         match self {
             //https://kylehalladay.com/blog/tutorial/math/2013/12/24/Ray-Sphere-Intersection.html
             Self::Sphere {pos, col, rad, mat} => {
@@ -62,6 +50,9 @@ impl Object {
                     } else {
                         let t1c = (rad2 - closest).sqrt();
                         let inters = project_len - t1c;
+                        if inters <= 0. {
+                            return None;
+                        }
                         let normal = (&ray.dir * inters - pos).normalize();
                         Some(HitInfo{p: &ray.start + &ray.dir * inters, normal, color: col.clone(), reflection: mat.clone()})
                     }
@@ -80,33 +71,22 @@ impl Object {
             }
         }
     }
-    pub fn bounce(mut ray: Ray, objs: &Vec<Object>, max_bounce: u8) -> Pixel{
-        let mut color: Vec3 = Vec3::new(1., 1., 1.);
-        for _ in 0..max_bounce {
-            let inter = Self::hit_all(&ray, &objs);
-            match inter {
-                Some(hit) => {
-                    let len = (&hit.p - &ray.start).length();
-                    if len < 0.001 {
-                        break;
-                    }
-
-                    color = mix(&color, &hit.color, &hit.reflection, len);
-                    ray = scatter(&ray, &hit, &hit.reflection);
-                }
-                _ => {
-                    let sky = Vec3::new(1., 1., 1.).lerp(&Vec3::new(0.478, 0.859, 0.949), (ray.dir.z + 1.) / 2.);
-                    /*if i == 0 || mirror{
-                        color = sky;
-                    } else {
-                        color = mix(&color, &sky, &Material::Diffuse(), 1000.);
-                    }*/
-                    color = &color * &sky;
-                    break;
-                }
-            }
+    pub fn bounce(ray: &Ray, objs: &Vec<Object>, max_bounce: u8) -> Vec3{
+        if max_bounce <= 0 {
+            return Vec3::new(0., 0., 0.);
         }
-        Pixel::new((color.x * 255.) as u8, (color.y * 255.) as u8, (color.z * 255.) as u8)
+
+        match Self::hit_all(ray, objs) {
+            Some(hit) => {
+                let r = scatter(ray, &hit);
+                return Self::bounce(&r, objs, max_bounce - 1);
+            }
+
+            None => {
+                let value = (ray.dir.z + 1.) / 2.;
+                return Vec3::new(1., 1., 1.).lerp(&Vec3::new(0.5, 0.7, 1.), value);
+            }
+        } 
     }
    
     

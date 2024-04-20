@@ -25,7 +25,7 @@ impl Vec3 {
         self / self.length()
     }
     pub fn lerp(&self, other: &Self, value: f32) -> Self {
-        assert_eq!(value >= 0.0 && value <= 1.0, true);
+        assert!(value >= 0.0 && value <= 1.0);
         self*(1.0-value) + other*value
     }
     pub fn mat_mult(&self, mat: &Vec<Vec<f32>>) -> Self{
@@ -36,7 +36,7 @@ impl Vec3 {
         )
     }
 
-    pub fn length_squared(&self) ->f32 {
+    pub fn length_squared(&self) -> f32 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
@@ -45,9 +45,9 @@ impl Vec3 {
         let mut c: u8 = 0;
         let mut sol = Self::new(0., 0., 0.);
         while c < 50 {
-            let x = rng.gen_range(-1.0..1.0);
-            let y = rng.gen_range(-1.0..1.0);
-            let z = rng.gen_range(-1.0..1.0);
+            let x = rng.gen_range(-1.0..=1.0);
+            let y = rng.gen_range(-1.0..=1.0);
+            let z = rng.gen_range(-1.0..=1.0);
             sol = Self {x, y, z};
             if sol.length_squared() <= 1. {
                 sol = sol.normalize();
