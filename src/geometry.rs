@@ -27,7 +27,7 @@ fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
 
         }
         Reflection::Metal() => {
-            sol.dir = &hit.p + (&hit.normal - &ray.dir) * -2.;
+            sol.dir = (&hit.normal - &ray.dir * -1.) * 2.;
             sol.dir = sol.dir.normalize();
         }
     }
@@ -86,7 +86,7 @@ impl Object {
         match Self::hit_all(ray, objs) {
             Some(hit) => {
                 let r = scatter(ray, &hit);
-                let future = Self::bounce(&r, objs, max_bounce - 1) * 0.8;
+                let future = Self::bounce(&r, objs, max_bounce - 1) * 0.7;
                 return &hit.material.color * &future;
             }
 
