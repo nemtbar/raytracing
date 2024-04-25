@@ -11,6 +11,8 @@ pub const WIDTH: usize = 500;
 pub const HEIGHT: usize = 500;
 //https://raytracing.github.io/books/RayTracingInOneWeekend.html
 
+const CAMERA: Point = Vec3::new(0., -3., 0.);
+
 
 
 //fragment shader -> runs for every pixel
@@ -20,7 +22,7 @@ fn frag(x: usize, y: usize) -> Pixel{
     let mut ux = (x as f32) / (WIDTH as f32) * (focal  * 2.)- focal;
     let uy = ((y as f32) / (HEIGHT as f32) * (focal * 2.) - focal) * -1.;
     ux *= WIDTH as f32/HEIGHT as f32;
-    let camera: Point = Vec3::new(0., -3., 0.);
+    
     let white = Vec3::new(1., 1., 1.);
     let objects: Vec<Object> = vec![
         Object::Sphere {pos: Vec3::new(2.1, 0., 0.), rad: 1., mat: Material{color: white.clone(), refl: Reflection::Diffuse()}},
@@ -37,7 +39,7 @@ fn frag(x: usize, y: usize) -> Pixel{
         let rand_x = rng.gen_range(-offset..offset);
         let rand_y = rng.gen_range(-offset..offset);
         let dir = Vec3::new(ux+rand_x, 1., uy+rand_y).normalize();
-        let ray = Ray::new(camera.clone(), dir.clone());
+        let ray = Ray::new(CAMERA.clone(), dir.clone());
         color_sum = color_sum + Object::bounce(&ray, &objects, b);
     }
     //average of color samples
