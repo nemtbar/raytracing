@@ -17,13 +17,13 @@ impl Pixel {
     }
 }
 
-pub fn display(func: impl Fn(usize, usize)-> Pixel) {
+pub fn display(func: impl Fn(usize, usize)-> Pixel, name: &str) {
     let mut buffer: RgbImage = ImageBuffer::new(WIDTH as u32, HEIGHT as u32);
     for (x, y, pixel) in buffer.enumerate_pixels_mut() {
         let col = func(x as usize, y as usize);
         *pixel = Rgb([col.r, col.g, col.b]);
     }
-    buffer.save("sample.png").unwrap();
+    buffer.save(format!("{}.png", name)).unwrap();
 }
 
 pub fn transform(r: f32, g: f32, b: f32) -> Pixel {

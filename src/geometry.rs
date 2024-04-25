@@ -2,42 +2,48 @@ use crate::vec3::{Point, Vec3};
 pub struct HitInfo {
     pub p: Point,
     pub normal: Vec3,
-    pub color: Vec3,
-    pub reflection: Material
+    pub material: Material
 }
 
 #[derive(Clone, PartialEq)]
-pub enum Material {
-    Diffuse (),
-    Reflective ()
+pub enum Reflection {
+    Diffuse(),
+    Metal()
+}
+
+#[derive(Clone, PartialEq)]
+pub struct Material {
+    pub color: Vec3,
+    pub refl: Reflection
 }
 
 fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
     let mut sol: Ray = Ray::new(hit.p.clone(), Vec3::new(0., 0., 0.));
-    match hit.reflection {
-        Material::Diffuse() => {
+    match hit.material.refl {
+        Reflection::Diffuse() => {
             //lambertian reflection
             let poi = &hit.p + &hit.normal;
             sol.dir = (poi+Vec3::random() - &hit.p).normalize();
 
         }
-        Material::Reflective() => {
+        Reflection::Metal() => {
             sol.dir = &hit.p + (&hit.normal - &ray.dir) * -2.;
+            sol.dir = sol.dir.normalize();
         }
     }
     sol
 }
 pub enum Object {
-    Sphere {pos: Vec3, col: Vec3, rad: f32, mat: Material},
-    Plane {pos: Vec3, normal: Vec3, col: Vec3, mat: Material}
+    Sphere {pos: Vec3, rad: f32, mat: Material},
+    Plane {pos: Vec3, normal: Vec3, mat: Material}
 }
 
 impl Object {
     fn intersect(&self, ray: &Ray) -> Option<HitInfo>{
-        //assert!(ray.dir.length() > 0.999 && ray.dir.length() < 1.001);
+        assert!(ray.dir.length() > 0.999 && ray.dir.length() < 1.001);
         match self {
             //https://kylehalladay.com/blog/tutorial/math/2013/12/24/Ray-Sphere-Intersection.html
-            Self::Sphere {pos, col, rad, mat} => {
+            Self::Sphere {pos, rad, mat} => {
                 let camera_self = pos - &ray.start;
                 let project_len = camera_self.dot(&ray.dir);
                 if project_len < 0.0{
@@ -54,17 +60,17 @@ impl Object {
                             return None;
                         }
                         let normal = (&ray.dir * inters - pos).normalize();
-                        Some(HitInfo{p: &ray.start + &ray.dir * inters, normal, color: col.clone(), reflection: mat.clone()})
+                        Some(HitInfo{p: &ray.start + &ray.dir * inters, normal, material: mat.clone()})
                     }
                 }
             }
-            Self::Plane {pos, normal, col, mat} => {
+            Self::Plane {pos, normal, mat} => {
                 //https://www.cs.princeton.edu/courses/archive/fall00/cs426/lectures/raycast/sld017.htm
                 //pos-vec dot normal = 0
                 let denom = normal.dot(&ray.dir);
                 let t = (pos - &ray.start).dot(normal) / denom;
                 if t > 0. {
-                    let hit = HitInfo{p: &ray.start + &ray.dir * t, normal: normal.clone(), color: col.clone(), reflection: mat.clone()};
+                    let hit = HitInfo{p: &ray.start + &ray.dir * t, normal: normal.clone(), material: mat.clone()};
                     return Some(hit);
                 }
                 None
@@ -72,6 +78,7 @@ impl Object {
         }
     }
     pub fn bounce(ray: &Ray, objs: &Vec<Object>, max_bounce: u8) -> Vec3{
+        assert!(ray.dir.length() > 0.999 && ray.dir.length() < 1.001);
         if max_bounce <= 0 {
             return Vec3::new(0., 0., 0.);
         }
@@ -79,10 +86,12 @@ impl Object {
         match Self::hit_all(ray, objs) {
             Some(hit) => {
                 let r = scatter(ray, &hit);
-                return Self::bounce(&r, objs, max_bounce - 1);
+                let future = Self::bounce(&r, objs, max_bounce - 1) * 0.8;
+                return &hit.material.color * &future;
             }
 
             None => {
+                
                 let value = (ray.dir.z + 1.) / 2.;
                 return Vec3::new(1., 1., 1.).lerp(&Vec3::new(0.5, 0.7, 1.), value);
             }
@@ -97,7 +106,10 @@ impl Object {
             match Self::intersect(&obj, ray){
                 Some(i) => {
                     let len = (&i.p - &ray.start).length();
-                    if len < min_dist {
+                    if len < 0.0001{
+                        continue;
+                    }
+                    else if len < min_dist {
                         inf = Some(i);
                         min_dist = len;
                     } else {
