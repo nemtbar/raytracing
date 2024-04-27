@@ -29,7 +29,7 @@ impl Object {
                         let thc = (rad2 - d).sqrt();
                         let t0 = tc - thc;
                         let normal = (&ray.dir * t0 - pos).normalize();
-                        Some(HitInfo{p: &ray.dir * t0, normal, color: col.clone(), emmision: emmision.clone()})
+                        Some(HitInfo{p: &ray.start + &ray.dir * t0, normal, color: col.clone(), emmision: emmision.clone()})
                     }
                 }
             }
@@ -54,9 +54,9 @@ impl Object {
             match inter {
                 Some(hit) => {
                     let poi = &hit.p + hit.normal;
-                    ray.dir = (Vec3::random() - poi).normalize();
+                    ray.dir = (poi + Vec3::random() - &hit.p).normalize();
                     ray.start = hit.p;
-                    light = &light + &color * &hit.emmision;
+                    light = &light + &color.lerp(&hit.color, 0.2) * hit.emmision;
                     color = hit.color;
 
                 }

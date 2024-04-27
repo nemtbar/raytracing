@@ -1,5 +1,4 @@
-use std::fs::File;
-use std::io::{self, Write};
+use image::{Rgb, RgbImage, ImageBuffer};
 use crate::{WIDTH, HEIGHT};
 #[derive(Clone, Copy, Default)]
 pub struct Pixel{
@@ -14,37 +13,11 @@ impl Pixel {
     }
 }
 
-
-pub struct Image{
-    pixels: [[Pixel; WIDTH]; HEIGHT]
-}
-
-impl Image{
-    pub fn new() -> Self{
-        Self{ pixels: [[Pixel::default(); WIDTH]; HEIGHT] }
+pub fn display(func: impl Fn(usize, usize)-> Pixel, name: &str) {
+    let mut buffer: RgbImage = ImageBuffer::new(WIDTH as u32, HEIGHT as u32);
+    for (x, y, pixel) in buffer.enumerate_pixels_mut() {
+        let col = func(x as usize, y as usize);
+        *pixel = Rgb([col.r, col.g, col.b]);
     }
-
-    pub fn new_with_method(method: impl Fn(usize, usize) -> Pixel) -> Self{
-        let mut image = Self::new();
-        for row in 0..HEIGHT{
-            for col in 0..WIDTH{
-                image.pixels[row][col] = method(col, row);
-            }
-        }
-        image
-    }
-    pub fn display(&self) -> io::Result<()>{
-        let mut file = File::create("sample.ppm")?;
-        writeln!(file, "P3\n{} {}\n255", self.pixels.len(), self.pixels[0].len())?;
-        for y in 0..self.pixels.len(){
-            let first = self.pixels[y][0];
-            let mut text = format!("{} {} {} ", first.r, first.g, first.b);
-            for x in 1..self.pixels[0].len(){
-                let p = self.pixels[y][x];
-                text += format!("{} {} {} ", p.r, p.g, p.b).as_str();
-            }
-            write!(file, "{}", text)?;
-        }
-        Ok(())
-    }
+    buffer.save(format!("{}.png", name)).unwrap();
 }
