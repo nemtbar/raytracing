@@ -135,3 +135,28 @@ impl Ray {
         Self{start, dir}
     }
 }
+
+pub struct Camera {
+    start: Vec3,
+    bases: Vec<Vec<f32>>
+}
+
+impl Camera {
+    pub fn new(focus: Vec3, angle: Vec3, dist: f32) -> Self {
+        let mut start = Vec3::new(0., -1., 0.).rot_x(angle.x).rot_y(angle.y).rot_z(angle.z);
+        start = start * dist + &focus;
+        let b_vec = [Vec3::new(1., 0., 0.), Vec3::new(0., 1., 0.), Vec3::new(0., 0., 1.)];
+        for i in b_vec.clone() {
+            i.rot_x(angle.x).rot_y(angle.y).rot_z(angle.z);
+        }
+        let bases = vec![vec![b_vec[0].x, b_vec[0].y, b_vec[0].z], 
+                                    vec![b_vec[1].x, b_vec[1].y, b_vec[1].z], 
+                                    vec![b_vec[2].x, b_vec[2].y, b_vec[2].z]];
+        Self { start, bases }
+    }
+
+    pub fn shoot(&self, ux: f32, uy: f32) -> Ray {
+        let dir = (Vec3::new(ux, 1., uy) * self.bases.clone()).normalize();
+        Ray { start: self.start.clone(), dir }
+    }
+}
