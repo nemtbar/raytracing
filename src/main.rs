@@ -28,17 +28,14 @@ fn frag(x: usize, y: usize) -> Pixel{
         Object::Sphere {pos: Vec3::new(0., 0., 1.7), col: Vec3::new(1., 0., 0.), rad: 2., emmision: 1.0},
         //Object::Plane {pos: Vec3::new(0., 0., 20.), normal: Vec3::new(0., 0., -1.), col: Vec3::new(1., 1., 1.), emmision: 2.}
     ];
-    let mut col = Pixel::default();
-    let c = 10;
+    let mut col = Vec3::default();
+    let c = 100;
     let max_b = 3;
-    for i in 0..c{
-        if i == 0{
-            col = Object::bounce(ray.clone(), &objects, max_b);
-        } else {
-            col = Object::bounce(ray.clone(), &objects, max_b).lerp(&col, 1.- 1./(c as f32));
-        }
+    for _ in 0..c{
+        col = col + Object::bounce(ray.clone(), &objects, max_b)
     }
-    col
+    col = col / c as f32;
+    Pixel::new((col.x * 255.) as u8, (col.y * 255.) as u8, (col.z * 255.) as u8)
 
 }
 fn main(){

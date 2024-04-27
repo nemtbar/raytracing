@@ -1,5 +1,4 @@
 use crate::vec3::{Point, Vec3};
-use crate::render::Pixel;
 pub struct HitInfo {
     pub p: Point,
     pub normal: Vec3,
@@ -47,7 +46,7 @@ impl Object {
             }
         }
     }
-    pub fn bounce(mut ray: Ray, objs: &Vec<Object>, count: u8) -> Pixel{
+    pub fn bounce(mut ray: Ray, objs: &Vec<Object>, count: u8) -> Vec3{
         let mut color: Vec3 = Vec3::new(1., 1., 1.);
         let mut light = Vec3::default();
         for _ in 0..count {
@@ -64,7 +63,7 @@ impl Object {
                 _ => break
             }
         }
-        Pixel::new((light.x * 255.) as u8, (light.y * 255.) as u8, (light.z * 255.) as u8)
+        light
     }
    
     
@@ -75,7 +74,10 @@ impl Object {
             match Self::intersect(&obj, ray){
                 Some(i) => {
                     let len = (&i.p - &ray.start).length();
-                    if len < min_dist {
+                    if len < 0.001 {
+                        continue;
+                    }
+                    else if len < min_dist {
                         inf = Some(i);
                         min_dist = len;
                     } else {
