@@ -8,7 +8,8 @@ pub struct HitInfo {
 #[derive(Clone, PartialEq)]
 pub enum Reflection {
     Diffuse(),
-    Metal()
+    //roughness is normalized
+    Metal{roughness: f32}
 }
 
 #[derive(Clone, PartialEq)]
@@ -26,13 +27,16 @@ fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
             sol.dir = (poi+Vec3::random() - &hit.p).normalize();
 
         }
-        Reflection::Metal() => {
+        Reflection::Metal{roughness} => {
             sol.dir = (&hit.normal - &ray.dir * -1.) * 2.;
+            sol.dir = sol.dir.normalize() + Vec3::random() * roughness;
             sol.dir = sol.dir.normalize();
         }
     }
     sol
 }
+
+#[derive(Clone)]
 pub enum Object {
     Sphere {pos: Vec3, rad: f32, mat: Material},
     Plane {pos: Vec3, normal: Vec3, mat: Material}
@@ -67,10 +71,14 @@ impl Object {
             Self::Plane {pos, normal, mat} => {
                 //https://www.cs.princeton.edu/courses/archive/fall00/cs426/lectures/raycast/sld017.htm
                 //pos-vec dot normal = 0
-                let denom = normal.dot(&ray.dir);
-                let t = (pos - &ray.start).dot(normal) / denom;
+                let mut n = normal.clone();
+                if n.dot(&ray.dir) > 0. {
+                    n = n * -1.;
+                }
+                let denom = n.dot(&ray.dir);
+                let t = (pos - &ray.start).dot(&n) / denom;
                 if t > 0. {
-                    let hit = HitInfo{p: &ray.start + &ray.dir * t, normal: normal.clone(), material: mat.clone()};
+                    let hit = HitInfo{p: &ray.start + &ray.dir * t, normal: n.clone(), material: mat.clone()};
                     return Some(hit);
                 }
                 None
@@ -86,7 +94,7 @@ impl Object {
         match Self::hit_all(ray, objs) {
             Some(hit) => {
                 let r = scatter(ray, &hit);
-                let future = Self::bounce(&r, objs, max_bounce - 1) * 0.7;
+                let future = Self::bounce(&r, objs, max_bounce - 1) * 0.9;
                 return &hit.material.color * &future;
             }
 
