@@ -22,10 +22,10 @@ fn frag(x: usize, y: usize) -> Pixel{
     
     let white = Vec3::new(1., 1., 1.);
     let objects: Vec<Object> = vec![
-        Object::Sphere {pos: Vec3::new(-1.5, -0.2, 0.), rad: 0.5, mat: Material{color: Vec3::new(0.1, 0.2, 0.9), refl: Reflection::Diffuse()}},
+        Object::Sphere {pos: Vec3::new(-1.35, -0.3, 0.), rad: 0.5, mat: Material{color: Vec3::new(0.1, 0.2, 0.9), refl: Reflection::Diffuse()}},
         Object::Plane {pos: Vec3::new(0., 0., -1.), normal: Vec3::new(0., 0., 1.), mat: Material{color: white.clone(), refl: Reflection::Diffuse()}},
         //Object::Sphere {pos: Vec3::new(0., 0., -40.), rad: 39., mat: Material{color: Vec3::new(1., 1., 0.), refl: Reflection::Diffuse()}},
-        Object::Sphere {pos: Vec3::default(), rad: 1., mat: Material{color: Vec3::new(1., 0.7, 0.7), refl: Reflection::Metal{roughness: 0.}}},
+        Object::Sphere {pos: Vec3::default(), rad: 1., mat: Material{color: white.clone(), refl: Reflection::Metal{roughness: 0.}}},
     ];
     let c = 50;
     let b = 50;

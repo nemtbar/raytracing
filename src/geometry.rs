@@ -9,7 +9,8 @@ pub struct HitInfo {
 pub enum Reflection {
     Diffuse(),
     //roughness is normalized
-    Metal{roughness: f32}
+    Metal{roughness: f32},
+    Glass()
 }
 
 #[derive(Clone, PartialEq)]
@@ -32,8 +33,23 @@ fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
             sol.dir = sol.dir.normalize() + Vec3::random() * roughness;
             sol.dir = sol.dir.normalize();
         }
+        Reflection::Glass() => {
+            sol.dir = &hit.normal * -1.;
+        }
     }
     sol
+}
+
+fn mix(a: Vec3, b: Vec3, mat: Reflection) -> Vec3 {
+    match mat {
+        Reflection::Glass() =>{
+            b
+        }
+
+        _ => {
+            a*(b*0.9)
+        }
+    }
 }
 
 #[derive(Clone)]
