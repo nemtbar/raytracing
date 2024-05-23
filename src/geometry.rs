@@ -40,17 +40,6 @@ fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
     sol
 }
 
-fn mix(a: Vec3, b: Vec3, mat: Reflection) -> Vec3 {
-    match mat {
-        Reflection::Glass() =>{
-            b
-        }
-
-        _ => {
-            a*(b*0.9)
-        }
-    }
-}
 
 #[derive(Clone)]
 pub enum Object {
@@ -79,7 +68,7 @@ impl Object {
                         if inters <= 0. {
                             return None;
                         }
-                        let normal = (&ray.dir * inters - pos).normalize();
+                        let normal = (&ray.start + &ray.dir * inters - pos).normalize();
                         Some(HitInfo{p: &ray.start + &ray.dir * inters, normal, material: mat.clone()})
                     }
                 }
