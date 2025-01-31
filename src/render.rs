@@ -1,7 +1,7 @@
 use std::usize;
 use image::{RgbImage, ImageBuffer, Rgb};
 use crate::{WIDTH, HEIGHT};
-
+use rayon::prelude::*;
 
 
 #[derive(Clone, Copy, Default)]
@@ -17,11 +17,24 @@ impl Pixel {
     }
 }
 
-pub fn display(func: impl Fn(usize, usize)-> Pixel, name: &str) {
+fn parallel_row<F>(func: F, y: usize) -> [Pixel; WIDTH]
+where
+    F: Fn(usize, usize) -> Pixel + Sync + Send,
+{
+    let mut arr: [Pixel; WIDTH] = [Pixel::default(); WIDTH];
+    arr.par_iter_mut().enumerate().for_each(|(x, pixel)|
+        *pixel = func(x, y));
+    arr
+}
+
+pub fn display<F>(func: F, name: &str)
+where F: Fn(usize, usize) -> Pixel + Sync + Send {
     let mut buffer: RgbImage = ImageBuffer::new(WIDTH as u32, HEIGHT as u32);
-    for (x, y, pixel) in buffer.enumerate_pixels_mut() {
-        let col = func(x as usize, y as usize);
-        *pixel = Rgb([col.r, col.g, col.b]);
+    for y in 0..HEIGHT {
+        let row = parallel_row(&func, y);
+        for (x, pix) in row.iter().enumerate() {
+            buffer.put_pixel(x as u32, y as u32, Rgb([pix.r, pix.g, pix.b]));
+        }
     }
     buffer.save(format!("{}.png", name)).unwrap();
 }

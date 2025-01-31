@@ -120,6 +120,14 @@ impl Add for Vec3{
     }
 }
 
+impl Add<f32> for &Vec3{
+    type Output = Vec3;
+    
+    fn add(self, rhs: f32) -> Self::Output {
+        Vec3::new(self.x+rhs, self.y+rhs, self.z+rhs)
+    }
+}
+
 //sub
 impl Sub<&Vec3> for &Vec3{
     type Output = Vec3;
@@ -199,12 +207,20 @@ impl Mul for Vec3 {
         &self * &rhs
     }
 }
-
+//matrix multiplication
 impl Mul<Vec<Vec<f32>>> for Vec3 {
     type Output = Vec3;
 
     fn mul(self, rhs: Vec<Vec<f32>>) -> Self::Output {
         self.mat_mult(&rhs)
+    }
+}
+
+impl Mul<&Vec3> for f32 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: &Vec3) -> Self::Output {
+        rhs * self
     }
 }
 

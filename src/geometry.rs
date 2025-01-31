@@ -18,6 +18,25 @@ pub struct Material {
     pub color: Vec3,
     pub refl: Reflection
 }
+//the n is the ratio of the refractive index of the second medium to the first medium
+//n1*sin(theta1) = n2*sin(theta2)
+//dir = normal*n + normal*(n*cos(theta) - cos(theta2))
+
+fn snell(incoming: &Vec3, normal: &Vec3, n1:f32, n2:f32) -> Vec3 {
+    let eta = n1 / n2; // Ratio of refractive indices
+    let cos_theta_i = incoming.dot(normal); // Cosine of incident angle
+    let sin2_theta_t = eta * eta * (1.0 - cos_theta_i * cos_theta_i);
+
+    // Check for total internal reflection
+    if sin2_theta_t > 1.0 {
+        return incoming * -1.; // No refraction possible (Total Internal Reflection)
+    }
+
+    let cos_theta_t = (1.0 - sin2_theta_t).abs().sqrt();
+    let refracted = eta * incoming + (eta * cos_theta_i - cos_theta_t) * normal;
+
+    refracted.normalize()
+}
 
 fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
     let mut sol: Ray = Ray::new(hit.p.clone(), Vec3::new(0., 0., 0.));
@@ -29,13 +48,21 @@ fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
 
         }
         Reflection::Metal{roughness} => {
-            sol.dir = (&hit.normal - &ray.dir * -1.) * 2.;
+            sol.dir = &ray.dir + &hit.normal * 2.;
             sol.dir = sol.dir.normalize() + Vec3::random() * roughness;
             sol.dir = sol.dir.normalize();
         }
         Reflection::Glass() => {
-            sol.dir = &hit.normal * -1.;
+            if ray.dir.dot(&hit.normal) > 0.{
+                //frontface
+                sol.dir = snell(&ray.dir, &hit.normal, 1., 1.5);
+            } else {
+                sol.dir = snell(&ray.dir, &hit.normal, 1.5, 1.);
+
+            }
+            assert!(sol.dir.length() > 0.999 && sol.dir.length() < 1.001, "scatter glass");
         }
+
     }
     sol
 }
@@ -90,7 +117,7 @@ impl Object {
             }
         }
     }
-    pub fn bounce(ray: &Ray, objs: &Vec<Object>, max_bounce: u8) -> Vec3{
+    pub fn bounce(ray: &Ray, objs: &[Object], max_bounce: u8) -> Vec3{
         assert!(ray.dir.length() > 0.999 && ray.dir.length() < 1.001);
         if max_bounce <= 0 {
             return Vec3::new(0., 0., 0.);
@@ -112,7 +139,7 @@ impl Object {
     }
    
     
-    pub fn hit_all(ray: &Ray, lis: &Vec<Self>) -> Option<HitInfo>{
+    pub fn hit_all(ray: &Ray, lis: &[Self]) -> Option<HitInfo>{
         let mut inf: Option<HitInfo> = None;
         let mut min_dist = 100000.;
         for obj in lis {
@@ -162,9 +189,11 @@ impl Camera {
         for i in b_vec.clone() {
             i.rot_x(angle.x).rot_y(angle.y).rot_z(angle.z);
         }
-        let bases = vec![vec![b_vec[0].x, b_vec[0].y, b_vec[0].z], 
+        let bases = vec![
+                                    vec![b_vec[0].x, b_vec[0].y, b_vec[0].z], 
                                     vec![b_vec[1].x, b_vec[1].y, b_vec[1].z], 
-                                    vec![b_vec[2].x, b_vec[2].y, b_vec[2].z]];
+                                    vec![b_vec[2].x, b_vec[2].y, b_vec[2].z]
+                                    ];
         Self { start, bases }
     }
 
