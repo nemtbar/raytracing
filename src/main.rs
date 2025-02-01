@@ -15,11 +15,11 @@ pub const HEIGHT: usize = 500;
 const WHITE: Vec3 = Vec3::new(1., 1., 1.);
 const OBJECTS: [Object; 3] = [
     Object::Sphere {
-        pos: Vec3::new(1.5, 1.6, 0.),
-        rad: 0.5,
+        pos: Vec3::new(0., 0., 0.),
+        rad: 0.2,
         mat: Material {
-            color: Vec3::new(0.1, 0.2, 0.9),
-            refl: Reflection::Metal { roughness: 0.2 },
+            color: WHITE,
+            refl: Reflection::Glass { reflective: 1. },
         },
     },
     Object::Plane {
@@ -30,15 +30,15 @@ const OBJECTS: [Object; 3] = [
             refl: Reflection::Diffuse(),
         },
     },
-    //Object::Sphere {pos: Vec3::new(0., 0., -40.), rad: 39., mat: Material{color: Vec3::new(1., 1., 0.), refl: Reflection::Diffuse()}},
     Object::Sphere {
-        pos: Vec3::new(0., 0., 0.2),
-        rad: 1.,
-        mat: Material {
-            color: WHITE,
-            refl: Reflection::Glass()
-        },
+        pos: Vec3::new(0., 0., 0.), 
+        rad: 1., 
+        mat: Material{
+            color: WHITE, 
+            refl: Reflection::Glass { reflective: 1.5 }
+        }
     },
+
 ];
 
 //fragment shader -> runs for every pixel
@@ -50,7 +50,7 @@ fn frag(x: usize, y: usize) -> Pixel {
     ux *= WIDTH as f32 / HEIGHT as f32;
 
 
-    let c = 100;
+    let c = 200;
     let bounce_count: u8 = 50;
     let mut rng = rand::thread_rng();
     let offset: f32 = 0.001;

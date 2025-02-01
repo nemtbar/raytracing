@@ -1,4 +1,5 @@
 use crate::vec3::{Point, Vec3};
+use rand::Rng;
 pub struct HitInfo {
     pub p: Point,
     pub normal: Vec3,
@@ -10,7 +11,7 @@ pub enum Reflection {
     Diffuse(),
     //roughness is normalized
     Metal{roughness: f32},
-    Glass()
+    Glass{reflective: f32}
 }
 
 #[derive(Clone, PartialEq)]
@@ -18,18 +19,26 @@ pub struct Material {
     pub color: Vec3,
     pub refl: Reflection
 }
+
+
+fn reflectance(cos: f32, eta: f32) -> f32 {
+    //Schlick's approximation
+    let r0 = ((1. - eta) / (1. + eta)).powi(2);
+    r0 + (1. - r0) * (1. - cos).powi(5)
+
+}
+
 //the n is the ratio of the refractive index of the second medium to the first medium
 //n1*sin(theta1) = n2*sin(theta2)
 //dir = normal*n + normal*(n*cos(theta) - cos(theta2))
-
-fn snell(incoming: &Vec3, normal: &Vec3, n1:f32, n2:f32) -> Vec3 {
-    let eta = n1 / n2; // Ratio of refractive indices
+fn snell(incoming: &Vec3, normal: &Vec3, eta: f32) -> Vec3 {
     let cos_theta_i = incoming.dot(normal); // Cosine of incident angle
     let sin2_theta_t = eta * eta * (1.0 - cos_theta_i * cos_theta_i);
 
+    let random: f32 = rand::thread_rng().gen_range(0.0..1.0); 
     // Check for total internal reflection
-    if sin2_theta_t > 1.0 {
-        return incoming * -1.; // No refraction possible (Total Internal Reflection)
+    if sin2_theta_t > 1.0 || reflectance(cos_theta_i.abs().min(1.), eta) > random {
+        return (incoming + normal * 2.).normalize();
     }
 
     let cos_theta_t = (1.0 - sin2_theta_t).abs().sqrt();
@@ -46,18 +55,18 @@ fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
             let poi = &hit.p + &hit.normal;
             sol.dir = (poi+Vec3::random() - &hit.p).normalize();
 
-        }
+        } 
         Reflection::Metal{roughness} => {
             sol.dir = &ray.dir + &hit.normal * 2.;
             sol.dir = sol.dir.normalize() + Vec3::random() * roughness;
             sol.dir = sol.dir.normalize();
         }
-        Reflection::Glass() => {
+        Reflection::Glass{reflective} => {
             if ray.dir.dot(&hit.normal) > 0.{
-                //frontface
-                sol.dir = snell(&ray.dir, &hit.normal, 1., 1.5);
+                //backface
+                sol.dir = snell(&ray.dir, &(-1. * &hit.normal), reflective);
             } else {
-                sol.dir = snell(&ray.dir, &hit.normal, 1.5, 1.);
+                sol.dir = snell(&ray.dir, &hit.normal, 1./reflective);
 
             }
             assert!(sol.dir.length() > 0.999 && sol.dir.length() < 1.001, "scatter glass");

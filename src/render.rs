@@ -2,7 +2,7 @@ use std::usize;
 use image::{RgbImage, ImageBuffer, Rgb};
 use crate::{WIDTH, HEIGHT};
 use rayon::prelude::*;
-
+use indicatif::ProgressBar;
 
 #[derive(Clone, Copy, Default)]
 pub struct Pixel{
@@ -30,12 +30,17 @@ where
 pub fn display<F>(func: F, name: &str)
 where F: Fn(usize, usize) -> Pixel + Sync + Send {
     let mut buffer: RgbImage = ImageBuffer::new(WIDTH as u32, HEIGHT as u32);
+    println!("Rendering image...");
+    let pb = ProgressBar::new(HEIGHT as u64);
     for y in 0..HEIGHT {
         let row = parallel_row(&func, y);
         for (x, pix) in row.iter().enumerate() {
             buffer.put_pixel(x as u32, y as u32, Rgb([pix.r, pix.g, pix.b]));
         }
+        pb.inc(1);
     }
+    pb.finish();
+    println!("done!");
     buffer.save(format!("{}.png", name)).unwrap();
 }
 
