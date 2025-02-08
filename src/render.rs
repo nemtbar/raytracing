@@ -39,7 +39,7 @@ where F: Fn(usize, usize) -> Pixel + Sync + Send {
         }
         pb.inc(1);
     }
-    pb.finish();
+    pb.finish_and_clear();
     println!("done!");
     buffer.save(format!("{}.png", name)).unwrap();
 }

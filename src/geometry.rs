@@ -1,3 +1,4 @@
+
 use crate::vec3::{Point, Vec3};
 use rand::Rng;
 pub struct HitInfo {
@@ -28,23 +29,19 @@ fn reflectance(cos: f32, eta: f32) -> f32 {
 
 }
 
-//the n is the ratio of the refractive index of the second medium to the first medium
-//n1*sin(theta1) = n2*sin(theta2)
-//dir = normal*n + normal*(n*cos(theta) - cos(theta2))
+//the eta is the ratio of the refractive index of the second medium to the first medium
+//index1*sin(theta1) = index2*sin(theta2)
 fn snell(incoming: &Vec3, normal: &Vec3, eta: f32) -> Vec3 {
-    let cos_theta_i = incoming.dot(normal); // Cosine of incident angle
-    let sin2_theta_t = eta * eta * (1.0 - cos_theta_i * cos_theta_i);
-
-    let random: f32 = rand::thread_rng().gen_range(0.0..1.0); 
-    // Check for total internal reflection
-    if sin2_theta_t > 1.0 || reflectance(cos_theta_i.abs().min(1.), eta) > random {
-        return (incoming + normal * 2.).normalize();
+    let cos_theta = (-1. * incoming).dot(normal).min(1.);
+    let refl = reflectance(cos_theta.abs().min(1.), eta) > rand::thread_rng().gen_range(0.0..1.0);
+    //sin^2theta + cos^2theta = 1
+    // total internal reflection
+    if (eta * (1.- cos_theta * cos_theta).abs().sqrt()) > 1. || refl{
+        return (incoming + normal * 2.).normalize()
     }
-
-    let cos_theta_t = (1.0 - sin2_theta_t).abs().sqrt();
-    let refracted = eta * incoming + (eta * cos_theta_i - cos_theta_t) * normal;
-
-    refracted.normalize()
+    let r_out_perp: Vec3 = eta * &(incoming + normal * cos_theta);
+    let r_out_parallel: Vec3 = (1.-r_out_perp.length_squared()).abs().sqrt() * -1. * normal;
+    return r_out_parallel + r_out_perp;
 }
 
 fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
@@ -191,13 +188,19 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(focus: Vec3, angle: Vec3, dist: f32) -> Self {
-        let mut start = Vec3::new(0., -1., 0.).rot_x(angle.x).rot_y(angle.y).rot_z(angle.z);
-        start = start * dist + &focus;
-        let b_vec = [Vec3::new(1., 0., 0.), Vec3::new(0., 1., 0.), Vec3::new(0., 0., 1.)];
-        for i in b_vec.clone() {
-            i.rot_x(angle.x).rot_y(angle.y).rot_z(angle.z);
+    pub fn new(angle: Vec3, dist: f32) -> Self {
+        let mut start = Vec3::new(0., -1., 0.);
+        let mut b_vec = [Vec3::new(1., 0., 0.), Vec3::new(0., 1., 0.), Vec3::new(0., 0., 1.)];
+
+        if angle.x != 0. || angle.y != 0. || angle.z != 0. {
+            start = start.rot_z(angle.z).rot_y(angle.y).rot_x(angle.x);
+
+            //camera always looks at the origin
+            for i in b_vec.iter_mut() {
+                *i = i.rot_z(-angle.z).rot_y(-angle.y).rot_x(-angle.x);
+            }
         }
+        start = start * dist;
         let bases = vec![
                                     vec![b_vec[0].x, b_vec[0].y, b_vec[0].z], 
                                     vec![b_vec[1].x, b_vec[1].y, b_vec[1].z], 

@@ -21,6 +21,13 @@ impl Vec3 {
     pub fn dot(&self, other: &Self) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
+    pub fn cross(&self, other: &Self) -> Self {
+        Vec3::new(
+            self.y * other.z - self.z * other.y,
+            self.z * other.x - self.x * other.z,
+            self.x * other.y - self.y * other.x
+        )
+    }
     pub fn normalize(&self) -> Vec3 {
         self / self.length()
     }
@@ -61,7 +68,7 @@ impl Vec3 {
     pub fn rot_z(&self, degree: f32) -> Self{
         let theta = f32::to_radians(degree);
         let rot = vec![
-            vec![theta.cos(), -(theta.sin()), 0.0],
+            vec![theta.cos(), -(theta.sin()), 0.],
             vec![theta.sin(), theta.cos(), 0.],
             vec![0., 0., 1.]
         ];
