@@ -1,5 +1,5 @@
 
-use crate::vec3::{Point, Vec3};
+use crate::{vec3::{Point, Vec3}, WIDTH, HEIGHT};
 use rand::Rng;
 pub struct HitInfo {
     pub p: Point,
@@ -184,33 +184,35 @@ impl Ray {
 
 pub struct Camera {
     start: Vec3,
-    bases: Vec<Vec<f32>>
+    upper_left: Point,
+    delta_x: Vec3,
+    delta_y: Vec3,
 }
 
 impl Camera {
-    pub fn new(angle: Vec3, dist: f32) -> Self {
-        let mut start = Vec3::new(0., -1., 0.);
-        let mut b_vec = [Vec3::new(1., 0., 0.), Vec3::new(0., 1., 0.), Vec3::new(0., 0., 1.)];
+    pub fn new(lookfrom: &Point, lookat: &Point, vertical_fov: f32, up: &Vec3) -> Self {
+    let focal_length = (lookfrom - lookat).length();
+    let theta = vertical_fov.to_radians();
+    let h = (theta/2.).tan();
+    let viewport_height = 2. * h * focal_length;
+    let viewport_width = WIDTH as f32 / HEIGHT as f32 * viewport_height;
+    let w = (lookfrom - lookat).normalize();
+    let u = up.cross(&w);
+    let v = w.cross(&u);
+    let viewport_u = u * viewport_width;
+    let viewport_v = -1. * &v * viewport_height;
+    let pixel_delta_u = &viewport_u / WIDTH as f32;
+    let pixel_delta_v = &viewport_v / HEIGHT as f32;
 
-        if angle.x != 0. || angle.y != 0. || angle.z != 0. {
-            start = start.rot_z(angle.z).rot_y(angle.y).rot_x(angle.x);
-
-            //camera always looks at the origin
-            for i in b_vec.iter_mut() {
-                *i = i.rot_z(-angle.z).rot_y(-angle.y).rot_x(-angle.x);
-            }
-        }
-        start = start * dist;
-        let bases = vec![
-                                    vec![b_vec[0].x, b_vec[0].y, b_vec[0].z], 
-                                    vec![b_vec[1].x, b_vec[1].y, b_vec[1].z], 
-                                    vec![b_vec[2].x, b_vec[2].y, b_vec[2].z]
-                                    ];
-        Self { start, bases }
+    //let upper_left: Vec3 = lookfrom - (focal_length * &w) - (viewport_u / 2.) + (viewport_v / 2.);
+    let upper_left = Vec3::new(0., 0., 0.) - (viewport_u / 2.) - (viewport_v / 2.);
+    let pixel00 = upper_left + 0.5 * &(&pixel_delta_u + &pixel_delta_v);
+    Self { start: lookfrom.clone(), upper_left: pixel00, delta_x: pixel_delta_u, delta_y: pixel_delta_v }
     }
 
     pub fn shoot(&self, ux: f32, uy: f32) -> Ray {
-        let dir = (Vec3::new(ux, 1., uy) * self.bases.clone()).normalize();
+        let target = &self.upper_left + (ux * &self.delta_x) + (uy * &self.delta_y);
+        let dir = (&target-&self.start).normalize();
         Ray { start: self.start.clone(), dir }
     }
 }
