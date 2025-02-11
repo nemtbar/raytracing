@@ -1,13 +1,13 @@
-
 use crate::{vec3::{Point, Vec3}, WIDTH, HEIGHT};
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 pub struct HitInfo {
     pub p: Point,
     pub normal: Vec3,
     pub material: Material
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Reflection {
     Diffuse(),
     //roughness is normalized
@@ -15,7 +15,7 @@ pub enum Reflection {
     Glass{reflective: f32}
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct Material {
     pub color: Vec3,
     pub refl: Reflection
@@ -74,7 +74,7 @@ fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum Object {
     Sphere {pos: Vec3, rad: f32, mat: Material},
     Plane {pos: Vec3, normal: Vec3, mat: Material}
@@ -187,18 +187,24 @@ pub struct Camera {
     upper_left: Point,
     delta_x: Vec3,
     delta_y: Vec3,
+    blur: f32
 }
 
 impl Camera {
-    pub fn new(lookfrom: &Point, lookat: &Point, vertical_fov: f32, up: &Vec3) -> Self {
+    pub fn new(lookfrom: &Point, lookat: &Point, vertical_fov: f32, up: &Vec3, blur: f32) -> Self {
+    assert!(up.length() > 0.999 && up.length() < 1.001, "up vector must be normalized at Camera::new");
     let focal_length = (lookfrom - lookat).length();
     let theta = vertical_fov.to_radians();
     let h = (theta/2.).tan();
+
     let viewport_height = 2. * h * focal_length;
     let viewport_width = WIDTH as f32 / HEIGHT as f32 * viewport_height;
+
     let w = (lookfrom - lookat).normalize();
-    let u = up.cross(&w);
+    assert!(w.dot(&up).abs() < 0.999, "up vector must not be parallel to the lookfrom-lookat vector\nat Camera::new");
+    let u = up.cross(&w).normalize();
     let v = w.cross(&u);
+
     let viewport_u = u * viewport_width;
     let viewport_v = -1. * &v * viewport_height;
     let pixel_delta_u = &viewport_u / WIDTH as f32;
@@ -207,12 +213,24 @@ impl Camera {
     //let upper_left: Vec3 = lookfrom - (focal_length * &w) - (viewport_u / 2.) + (viewport_v / 2.);
     let upper_left = Vec3::new(0., 0., 0.) - (viewport_u / 2.) - (viewport_v / 2.);
     let pixel00 = upper_left + 0.5 * &(&pixel_delta_u + &pixel_delta_v);
-    Self { start: lookfrom.clone(), upper_left: pixel00, delta_x: pixel_delta_u, delta_y: pixel_delta_v }
+    Self { start: lookfrom.clone(), upper_left: pixel00, delta_x: pixel_delta_u, delta_y: pixel_delta_v, blur }
     }
 
     pub fn shoot(&self, ux: f32, uy: f32) -> Ray {
+        let mut count = 0;
+        let mut rand_disk_x: f32;
+        let mut rand_disk_y: f32;
+        loop {
+            rand_disk_x = rand::thread_rng().gen_range(-1.0..1.0);
+            rand_disk_y = rand::thread_rng().gen_range(-1.0..1.0);
+            if rand_disk_x * rand_disk_x + rand_disk_y * rand_disk_y <= 1. || count > 50{
+                break
+            }
+            count += 1;
+        }
+        let disk = &self.start  + (rand_disk_x * self.blur) * &self.delta_x + (rand_disk_y * self.blur) * &self.delta_y;
         let target = &self.upper_left + (ux * &self.delta_x) + (uy * &self.delta_y);
         let dir = (&target-&self.start).normalize();
-        Ray { start: self.start.clone(), dir }
+        Ray { start: disk, dir }
     }
 }

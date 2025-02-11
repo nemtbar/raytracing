@@ -1,8 +1,7 @@
-#![allow(dead_code)]
-
 mod geometry;
 mod render;
 mod vec3;
+mod readin;
 use geometry::{Camera, Material, Object, Reflection};
 use rand::Rng;
 use render::{display, transform, Pixel};
@@ -15,48 +14,22 @@ pub const HEIGHT: usize = 500;
 
 mod uniforms {
     use lazy_static::lazy_static;
-
     use super::*;
-    pub const FOCAL: f32 = 0.7;
-    pub const SAMPLE_COUNT: u32 = 30;
+    pub const SAMPLE_COUNT: u32 = 20;
     pub const BOUNCE_COUNT: u8 = 50;
     pub const OFFSET: f32 = WIDTH as f32 / 1000.;
-    pub const WHITE: Vec3 = Vec3::new(1., 1., 1.);
-    pub const OBJECTS: [Object; 3] = [
-    Object::Sphere {
-        pos: Vec3::new(0., 0., 0.),
-        rad: 1.,
-        mat: Material {
-            color: Vec3::new(1., 0.78, 0.),
-            refl: Reflection::Diffuse(),
-        },
-    },
-    Object::Plane { 
-        pos: Vec3::new(0., 0., -1.),
-        normal: Vec3::new(0., 0., 1.),
-        mat: Material {
-            color: WHITE,
-            refl: Reflection::Diffuse(),
-        },
-    },
-    Object::Sphere { 
-        pos: Vec3::new(-2., 0., 0.),
-        rad: 1.,
-        mat: Material {
-            color: WHITE,
-            refl: Reflection::Metal { roughness: 0.1 },
-        },
-    }
-
-    ];
     lazy_static!(
         pub static ref cam: Camera = Camera::new(
-        &Vec3::new(-5., -4., 2.),
-        &Vec3::new(0., 0., 0.),
-        90.,
-        &Vec3::new(0., 0., 1.), //up
+            &Vec3::new(0., -5., 4.),
+            &Vec3::new(0., 0., 0.),
+            90.,
+            //must not be parallel to the lookfrom-lookat vector
+            &Vec3::new(0., 0., 1.), //up
+            0.,
         );
+        pub static ref OBJECTS: Vec<Object> = readin::safe_load_objects("objects.json", vec![]);
     );
+
 
     
 }
