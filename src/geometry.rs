@@ -33,7 +33,7 @@ fn reflectance(cos: f32, eta: f32) -> f32 {
 //index1*sin(theta1) = index2*sin(theta2)
 fn snell(incoming: &Vec3, normal: &Vec3, eta: f32) -> Vec3 {
     let cos_theta = (-1. * incoming).dot(normal).min(1.);
-    let refl = reflectance(cos_theta.abs().min(1.), eta) > rand::thread_rng().gen_range(0.0..1.0);
+    let refl = reflectance(cos_theta.abs(), eta) > rand::thread_rng().gen_range(0.0..1.0);
     //sin^2theta + cos^2theta = 1
     // total internal reflection
     if (eta * (1.- cos_theta * cos_theta).abs().sqrt()) > 1. || refl{
@@ -41,7 +41,7 @@ fn snell(incoming: &Vec3, normal: &Vec3, eta: f32) -> Vec3 {
     }
     let r_out_perp: Vec3 = eta * &(incoming + normal * cos_theta);
     let r_out_parallel: Vec3 = (1.-r_out_perp.length_squared()).abs().sqrt() * -1. * normal;
-    return r_out_parallel + r_out_perp;
+    return (r_out_parallel + r_out_perp).normalize();
 }
 
 fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
@@ -77,10 +77,22 @@ fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum Object {
     Sphere {pos: Vec3, rad: f32, mat: Material},
-    Plane {pos: Vec3, normal: Vec3, mat: Material}
+    Plane {pos: Vec3, normal: Vec3, mat: Material},
+    Triangle {p1: Vec3, p2: Vec3, p3: Vec3, normal: Vec3, center: Vec3, mat: Material}
 }
 
 impl Object {
+    pub fn new_triangle(p1: Vec3, p2: Vec3, p3: Vec3, mat: Material) -> Self {
+        let center = (&p1 + &p2 + &p3) / 3.;
+        let normal = (&p2 - &p1).cross(&(&p3 - &p1)).normalize();
+        Self::Triangle {p1, p2, p3, normal, center, mat}
+    }
+    pub fn new_rect(corner: Vec3, delta_x: &Vec3, delta_y: &Vec3, mat: Material) -> Vec<Object> {
+        let tri = Self::new_triangle(corner.clone(), &corner + delta_y, &corner + delta_x + delta_y, mat.clone());
+        let tri2 = Self::new_triangle(&corner + delta_x + delta_y, &corner + delta_x, corner.clone(), mat.clone());
+        vec![tri, tri2]
+    }
+
     fn intersect(&self, ray: &Ray) -> Option<HitInfo>{
         assert!(ray.dir.length() > 0.999 && ray.dir.length() < 1.001);
         match self {
@@ -107,7 +119,7 @@ impl Object {
                 }
             }
             Self::Plane {pos, normal, mat} => {
-                //https://www.cs.princeton.edu/courses/archive/fall00/cs426/lectures/raycast/sld017.htm
+                //https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection.html
                 //pos-vec dot normal = 0
                 let mut n = normal.clone();
                 if n.dot(&ray.dir) > 0. {
@@ -120,6 +132,27 @@ impl Object {
                     return Some(hit);
                 }
                 None
+            }
+            Self::Triangle { p1, p2, p3, mat, normal , center } => {
+                let plane = Self::Plane { pos: center.clone(), normal: normal.clone(), mat: mat.clone()};
+                let hitp: Point;
+                match plane.intersect(ray) {
+                    Some(hit) => {
+                        hitp = hit.p;
+                        }
+                    None => return None
+                }
+                //triangle area
+                let tri_a = (p2 - p1).cross(&(p3 - p1)).length() / 2.;
+                let a1 = (p1 - &hitp).cross(&(p2 - &hitp)).length() / 2.;
+                let a2 = (p2 - &hitp).cross(&(p3 - &hitp)).length() / 2.;
+                let a3 = (p3 - &hitp).cross(&(p1 - &hitp)).length() / 2.;
+                if (a1 + a2 + a3) > tri_a + 0.0001 {
+                    return None;
+                }
+                else {
+                    return Some(HitInfo{p: hitp, normal: normal.clone(), material: mat.clone()});
+                }
             }
         }
     }
@@ -170,6 +203,7 @@ impl Object {
         inf
     }
 }
+
 #[derive(Clone)]
 pub struct Ray {
     pub start: Point,
@@ -182,6 +216,7 @@ impl Ray {
     }
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct Camera {
     start: Vec3,
     upper_left: Point,
@@ -189,6 +224,7 @@ pub struct Camera {
     delta_y: Vec3,
     blur: f32
 }
+
 
 impl Camera {
     pub fn new(lookfrom: &Point, lookat: &Point, vertical_fov: f32, up: &Vec3, blur: f32) -> Self {
@@ -232,5 +268,12 @@ impl Camera {
         let target = &self.upper_left + (ux * &self.delta_x) + (uy * &self.delta_y);
         let dir = (&target-&self.start).normalize();
         Ray { start: disk, dir }
+    }
+}
+
+
+impl Default for Camera {
+    fn default() -> Self {
+        Self::new(&Vec3::new(0., -5., 0.), &Vec3::default(), 90., &Vec3::new(0., 0., 1.), 0.)
     }
 }

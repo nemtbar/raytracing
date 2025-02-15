@@ -14,6 +14,9 @@ impl Vec3 {
     pub const fn new(x: f32, y: f32, z: f32) -> Self{
         Vec3{x, y, z}
     }
+    pub const fn new1(x: f32) -> Self{
+        Vec3{x, y: x, z: x}
+    }
 
     pub fn length(&self) -> f32{
         self.length_squared().sqrt()
