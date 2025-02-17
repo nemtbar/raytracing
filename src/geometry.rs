@@ -199,16 +199,23 @@ impl Object {
                 match hit.material.tex {
                     Texture::Solid { color } => return color * future,
                     Texture::Checker{color1, color2, size} => {
-                        let x = (hit.p.x / size).floor() as i32;
-                        let y = (hit.p.y / size).floor() as i32;
-                        let z = (hit.p.z / size).floor() as i32;
+                        let x = (hit.p.x / size).round() as i32;
+                        let y = (hit.p.y / size).round() as i32;
+                        let z = (hit.p.z / size).round() as i32;
+
                         if (x+y+z)%2 == 0 {
                             return color1 * future
                         } else {
                             return color2 * future;
                         }
                     }
-                    Texture::Img{img: _} => future
+                    Texture::Img{img} => {
+                        assert!(hit.u >= 0. && hit.u <= 1. && hit.v >= 0. && hit.v <= 1., "texture coord not in 0-1");
+                        let x = (hit.u * (img.width as f32)) as usize;
+                        let y = (hit.v * (img.height as f32)) as usize;
+                        let color = img.get_pixel(x, y);
+                        color * future
+                    }
                 }
 
             }

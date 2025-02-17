@@ -2,11 +2,13 @@ mod geometry;
 mod render;
 mod vec3;
 mod textures;
+use image::RgbImage;
 #[allow(unused_imports)]
+use image::{ImageBuffer, ImageReader};
 use geometry::{Camera, Material, Object, Reflection};
 use rand::Rng;
 use render::{display, transform, Pixel};
-use textures::Texture;
+use textures::{Texture, Picture};
 use std::env;
 use vec3::Vec3;
 pub const WIDTH: usize = 500;
@@ -50,32 +52,24 @@ fn frag(x: usize, y: usize, input: &Uniforms) -> Pixel {
 
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
-    let p1 = Vec3::new(-0.5, -0.2, 0.);
-    let p2 = Vec3::new(0.5, -0.2, 0.);
-    let p3 = Vec3::new(0., -0.8, 0.);
-    let p4 = Vec3::new(0., 0., 1.);
-    let mat = Material {refl: Reflection::Metal { roughness: 0. }, tex: Texture::Solid{color: Vec3::new(1., 0.8, 0.)}};
-    let objs = vec![
-        Object::new_triangle(&p1, &p2, &p3, &mat),
-        Object::new_triangle(&p1, &p2, &p4, &mat),
-        Object::new_triangle(&p2, &p3, &p4, &mat),
-        Object::new_triangle(&p3, &p1, &p4, &mat),
-        Object::Sphere { pos: Vec3::new(-1.5, 0., 1.), rad: 1., mat: Material {refl: Reflection::Metal { roughness: 0. }, tex: Texture::Solid{color: Vec3::new1(1.)}} }
-    ];
+    let image: RgbImage = ImageReader::open("marked.jpg").unwrap().decode().unwrap().into_rgb8();
+    let img = Picture::new(image);
+    let _tex = Texture::Checker { color1: Vec3::new1(1.), color2: Vec3::new1(0.), size: 0.5};
     let input = Uniforms {
-        sample_count: 100, 
-        bounce_count: 50,
+        sample_count: 1, 
+        bounce_count: 3,
         offset: WIDTH as f32/1000.,
         cam: Camera::new(
-            &Vec3::new(0., -2., 1.),
+            &Vec3::new(0., -7., 6.),
             &Vec3::default(),
-            75., 
+            95., 
             &Vec3::new(0., 0., 1.),
             0.
         ),
         objects: vec![
-            Object::Plane { pos: Vec3::new(0., 0., 0.), normal: Vec3::new(0., 0., 1.), mat: Material {refl: Reflection::Diffuse(), tex: Texture::Solid{color: Vec3::new(1., 1., 1.)}}},
-            Object::BoundBox { min: Vec3::new(-50., -2., -2.), max: Vec3::new(50., 200., 40.), inside: objs }
+            
+            Object::Plane { pos: Vec3::new(0., 0., 0.), normal: Vec3::new(0., 0., 1.), mat: Material {refl: Reflection::Diffuse(), tex: Texture::Solid { color: Vec3::new1(1.)}}},
+            Object::Sphere { pos: Vec3::new(0., 0., 3.), rad: 3., mat: Material {tex: Texture::Img {img}, refl: Reflection::Diffuse()} }
         ]
     };
 
