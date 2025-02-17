@@ -1,8 +1,7 @@
 use std::ops::{Add, Div, Mul, Sub};
 use rand::Rng;
-use serde::{Deserialize, Serialize};
 
-#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,

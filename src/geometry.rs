@@ -1,13 +1,14 @@
-use crate::{vec3::{Point, Vec3}, WIDTH, HEIGHT};
+use crate::{vec3::{Point, Vec3}, WIDTH, HEIGHT, textures::Texture};
 use rand::Rng;
-use serde::{Deserialize, Serialize};
 pub struct HitInfo {
     pub p: Point,
     pub normal: Vec3,
-    pub material: Material
+    pub material: Material,
+    pub u: f32,
+    pub v: f32
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Reflection {
     Diffuse(),
     //roughness is normalized
@@ -15,12 +16,12 @@ pub enum Reflection {
     Glass{reflective: f32}
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
-pub struct Material {
-    pub color: Vec3,
-    pub refl: Reflection
-}
 
+#[derive(Clone, Debug)]
+pub struct Material {
+    pub refl: Reflection,
+    pub tex: Texture
+}
 
 fn reflectance(cos: f32, eta: f32) -> f32 {
     //Schlick's approximation
@@ -73,23 +74,30 @@ fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
     sol
 }
 
+fn overlap(min1: f32, max1: f32, min2: f32, max2: f32) -> bool {
+    let over_min = min1.max(min2);
+    let over_max = max1.min(max2);
+    over_min < over_max
+}
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+
+#[derive(Clone, Debug)]
 pub enum Object {
     Sphere {pos: Vec3, rad: f32, mat: Material},
     Plane {pos: Vec3, normal: Vec3, mat: Material},
-    Triangle {p1: Vec3, p2: Vec3, p3: Vec3, normal: Vec3, center: Vec3, mat: Material}
+    Triangle {p1: Vec3, p2: Vec3, p3: Vec3, normal: Vec3, center: Vec3, mat: Material},
+    BoundBox {min: Vec3, max: Vec3, inside: Vec<Object>}
 }
 
 impl Object {
-    pub fn new_triangle(p1: Vec3, p2: Vec3, p3: Vec3, mat: Material) -> Self {
-        let center = (&p1 + &p2 + &p3) / 3.;
-        let normal = (&p2 - &p1).cross(&(&p3 - &p1)).normalize();
-        Self::Triangle {p1, p2, p3, normal, center, mat}
+    pub fn new_triangle(p1: &Vec3, p2: &Vec3, p3: &Vec3, mat: &Material) -> Self {
+        let center = (p1 + p2 + p3) / 3.;
+        let normal = (p2 - p1).cross(&(p3 - p1)).normalize();
+        Self::Triangle {p1: p1.clone(), p2: p2.clone(), p3: p3.clone(), normal, center, mat: mat.clone()}
     }
-    pub fn new_rect(corner: Vec3, delta_x: &Vec3, delta_y: &Vec3, mat: Material) -> Vec<Object> {
-        let tri = Self::new_triangle(corner.clone(), &corner + delta_y, &corner + delta_x + delta_y, mat.clone());
-        let tri2 = Self::new_triangle(&corner + delta_x + delta_y, &corner + delta_x, corner.clone(), mat.clone());
+    pub fn new_rect(corner: &Vec3, delta_x: &Vec3, delta_y: &Vec3, mat: Material) -> Vec<Object> {
+        let tri = Self::new_triangle(corner, &(corner + delta_y), &(corner + delta_x + delta_y), &mat);
+        let tri2 = Self::new_triangle(&(corner + delta_x + delta_y), &(corner + delta_x), corner, &mat);
         vec![tri, tri2]
     }
 
@@ -114,7 +122,9 @@ impl Object {
                             return None;
                         }
                         let normal = (&ray.start + &ray.dir * inters - pos).normalize();
-                        Some(HitInfo{p: &ray.start + &ray.dir * inters, normal, material: mat.clone()})
+                        let hitp = &ray.start + &ray.dir * inters;
+                        let (u,v) = Texture::sphere_uv_coord(pos, &hitp);
+                        Some(HitInfo{p: hitp, normal, material: mat.clone(), u, v})
                     }
                 }
             }
@@ -128,7 +138,7 @@ impl Object {
                 let denom = n.dot(&ray.dir);
                 let t = (pos - &ray.start).dot(&n) / denom;
                 if t > 0. {
-                    let hit = HitInfo{p: &ray.start + &ray.dir * t, normal: n.clone(), material: mat.clone()};
+                    let hit = HitInfo{p: &ray.start + &ray.dir * t, normal: n.clone(), material: mat.clone(), u: 0., v: 0.};
                     return Some(hit);
                 }
                 None
@@ -151,12 +161,32 @@ impl Object {
                     return None;
                 }
                 else {
-                    return Some(HitInfo{p: hitp, normal: normal.clone(), material: mat.clone()});
+                    let mut n = normal.clone();
+                    if n.dot(&ray.dir) > 0. {
+                        n = n * -1.;
+                    }
+                    return Some(HitInfo{p: hitp, normal: n, material: mat.clone(), u: 0., v: 0.});
                 }
+            }
+
+            Self::BoundBox { min, max, inside } => {
+                let tx0 = ((min.x - ray.start.x)/ray.dir.x).min((max.x - ray.start.x)/ray.dir.x);
+                let tx1 = ((min.x - ray.start.x)/ray.dir.x).max((max.x - ray.start.x)/ray.dir.x);
+                let ty0 = ((min.y - ray.start.y)/ray.dir.y).min((max.y - ray.start.y)/ray.dir.y);
+                let ty1 = ((min.y - ray.start.y)/ray.dir.y).max((max.y - ray.start.y)/ray.dir.y);
+                let tz0 = ((min.z - ray.start.z)/ray.dir.z).min((max.z - ray.start.z)/ray.dir.z);
+                let tz1 = ((min.z - ray.start.z)/ray.dir.z).max((max.z - ray.start.z)/ray.dir.z);
+                let before_cam = tx1 > 0. && ty1 > 0. && tz1 > 0.;
+                let nan = tx0.is_nan() || tx1.is_nan() || ty0.is_nan() || ty1.is_nan() || tz0.is_nan() || tz1.is_nan();
+                let over =  overlap(tx0, tx1, ty0, ty1) && overlap(tx0, tx1, tz0, tz1) && overlap(tz0, tz1, ty0, ty1);
+                if (nan || over) && before_cam {
+                    return Self::hit_all(ray, inside);
+                }
+                None
             }
         }
     }
-    pub fn bounce(ray: &Ray, objs: &[Object], max_bounce: u8) -> Vec3{
+    pub fn bounce(ray: &Ray, objs: &Vec<Object>, max_bounce: u8) -> Vec3{
         assert!(ray.dir.length() > 0.999 && ray.dir.length() < 1.001);
         if max_bounce <= 0 {
             return Vec3::new(0., 0., 0.);
@@ -166,7 +196,21 @@ impl Object {
             Some(hit) => {
                 let r = scatter(ray, &hit);
                 let future = Self::bounce(&r, objs, max_bounce - 1) * 0.9;
-                return &hit.material.color * &future;
+                match hit.material.tex {
+                    Texture::Solid { color } => return color * future,
+                    Texture::Checker{color1, color2, size} => {
+                        let x = (hit.p.x / size).floor() as i32;
+                        let y = (hit.p.y / size).floor() as i32;
+                        let z = (hit.p.z / size).floor() as i32;
+                        if (x+y+z)%2 == 0 {
+                            return color1 * future
+                        } else {
+                            return color2 * future;
+                        }
+                    }
+                    Texture::Img{img: _} => future
+                }
+
             }
 
             None => {
@@ -178,7 +222,7 @@ impl Object {
     }
    
     
-    pub fn hit_all(ray: &Ray, lis: &[Self]) -> Option<HitInfo>{
+    pub fn hit_all(ray: &Ray, lis: &Vec<Object>) -> Option<HitInfo>{
         let mut inf: Option<HitInfo> = None;
         let mut min_dist = 100000.;
         for obj in lis {
@@ -216,7 +260,6 @@ impl Ray {
     }
 }
 
-#[derive(Deserialize, Serialize)]
 pub struct Camera {
     start: Vec3,
     upper_left: Point,

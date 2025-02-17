@@ -1,4 +1,3 @@
-use std::usize;
 use image::{RgbImage, ImageBuffer, Rgb};
 use crate::{WIDTH, HEIGHT, Uniforms};
 use rayon::prelude::*;

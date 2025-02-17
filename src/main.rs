@@ -1,19 +1,18 @@
 mod geometry;
 mod render;
 mod vec3;
-mod readin;
+mod textures;
 #[allow(unused_imports)]
 use geometry::{Camera, Material, Object, Reflection};
 use rand::Rng;
 use render::{display, transform, Pixel};
+use textures::Texture;
 use std::env;
 use vec3::Vec3;
-use serde::{Deserialize, Serialize};
 pub const WIDTH: usize = 500;
 pub const HEIGHT: usize = 500;
 //https://raytracing.github.io/books/RayTracingInOneWeekend.html
 
-#[derive(Deserialize, Serialize)]
 pub struct Uniforms {
     pub sample_count: u32,
     pub bounce_count: u8,
@@ -24,7 +23,7 @@ pub struct Uniforms {
 
 impl Default for Uniforms {
     fn default() -> Self {
-        Self { sample_count: 100, bounce_count: 50, offset: WIDTH as f32/1000., cam: Camera::default(), objects: readin::safe_load_objects("objects.json", vec![]) }
+        Self { sample_count: 100, bounce_count: 50, offset: WIDTH as f32/1000., cam: Camera::default(), objects: vec![] }
     }
     
 }
@@ -51,35 +50,34 @@ fn frag(x: usize, y: usize, input: &Uniforms) -> Pixel {
 
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
-    let mut input = Uniforms {
-        sample_count: 700, 
+    let p1 = Vec3::new(-0.5, -0.2, 0.);
+    let p2 = Vec3::new(0.5, -0.2, 0.);
+    let p3 = Vec3::new(0., -0.8, 0.);
+    let p4 = Vec3::new(0., 0., 1.);
+    let mat = Material {refl: Reflection::Metal { roughness: 0. }, tex: Texture::Solid{color: Vec3::new(1., 0.8, 0.)}};
+    let objs = vec![
+        Object::new_triangle(&p1, &p2, &p3, &mat),
+        Object::new_triangle(&p1, &p2, &p4, &mat),
+        Object::new_triangle(&p2, &p3, &p4, &mat),
+        Object::new_triangle(&p3, &p1, &p4, &mat),
+        Object::Sphere { pos: Vec3::new(-1.5, 0., 1.), rad: 1., mat: Material {refl: Reflection::Metal { roughness: 0. }, tex: Texture::Solid{color: Vec3::new1(1.)}} }
+    ];
+    let input = Uniforms {
+        sample_count: 100, 
         bounce_count: 50,
         offset: WIDTH as f32/1000.,
         cam: Camera::new(
-            &Vec3::new(0., -20., 4.),
+            &Vec3::new(0., -2., 1.),
             &Vec3::default(),
             75., 
             &Vec3::new(0., 0., 1.),
             0.
         ),
         objects: vec![
-            Object::Plane { pos: Vec3::new(0., 0., -1.), normal: Vec3::new(0., 0., 1.), mat: Material {color: Vec3::new(1., 1., 1.), refl: Reflection::Diffuse()}},
+            Object::Plane { pos: Vec3::new(0., 0., 0.), normal: Vec3::new(0., 0., 1.), mat: Material {refl: Reflection::Diffuse(), tex: Texture::Solid{color: Vec3::new(1., 1., 1.)}}},
+            Object::BoundBox { min: Vec3::new(-50., -2., -2.), max: Vec3::new(50., 200., 40.), inside: objs }
         ]
     };
-    for _ in 0..30 {
-        let r = Vec3::random();
-        let sph = Object::Sphere { pos: Vec3::new(r.x, r.y, 0.) * 20., rad: 1., mat: Material {color: Vec3::new(1., 0., 0.).lerp(&Vec3::new(0., 0., 1.), r.z.abs()), refl: Reflection::Diffuse()}};
-        input.objects.push(sph);
-    }
-    for _ in 0..10 {
-        let r = Vec3::random();
-        let glass = Object::Sphere { pos: Vec3::new(r.x, r.y, 0.) * 10., rad: 1., mat: Material {color: Vec3::new(1., 1., 1.), refl: Reflection::Glass { reflective: 1.5 }}};
-        input.objects.push(glass);
-    }
-    for _ in 0..5 {
-        let r = Vec3::random();
-        let sph = Object::Sphere { pos: Vec3::new(r.x, r.y, 0.) * 10., rad: 1., mat: Material {color: Vec3::new(1., 1., 1.), refl: Reflection::Metal { roughness: 0. }}};
-        input.objects.push(sph);
-    }
+
     display(frag, input, "sample");
 }
