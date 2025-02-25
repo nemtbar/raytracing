@@ -81,24 +81,39 @@ fn overlap(min1: f32, max1: f32, min2: f32, max2: f32) -> bool {
 }
 
 
-#[derive(Clone, Debug)]
 pub enum Object {
     Sphere {pos: Vec3, rad: f32, mat: Material},
-    Plane {pos: Vec3, normal: Vec3, mat: Material},
-    Triangle {p1: Vec3, p2: Vec3, p3: Vec3, normal: Vec3, center: Vec3, mat: Material},
-    BoundBox {min: Vec3, max: Vec3, inside: Vec<Object>}
+    Plane {pos: Vec3, normal: Vec3, plane_type: Planes, mat: Material},
+    BoundBox {min: Vec3, max: Vec3, inside: Vec<Object>},
+}
+
+pub enum Planes{
+    Rect{delta_x: Vec3, delta_y: Vec3},
+    Triangle{delta_x: Vec3, delta_y: Vec3},
+    Disk{delta_x: Vec3, delta_y: Vec3, r: f32},
+    Plane()
+}
+
+impl Planes{
+    fn get_fn(&self)->Box<dyn Fn(f32, f32)->bool>{
+        match self {
+            Self::Triangle{delta_x: _, delta_y: _} => Box::new(|a: f32, b: f32| a > 0. && b > 0. && a+b < 1.),
+            Self::Rect{delta_x: _, delta_y: _} => Box::new(|a: f32, b: f32| 0. < a && a < 1. && 0. < b && b < 1.),
+            Self::Disk{delta_x: _, delta_y: _, r} =>  {
+                let r = *r;
+                Box::new(move |a: f32, b: f32| a*a+b*b < r)
+            }
+            _ => Box::new(|_, _| true)
+        }
+    }
 }
 
 impl Object {
-    pub fn new_triangle(p1: &Vec3, p2: &Vec3, p3: &Vec3, mat: &Material) -> Self {
-        let center = (p1 + p2 + p3) / 3.;
-        let normal = (p2 - p1).cross(&(p3 - p1)).normalize();
-        Self::Triangle {p1: p1.clone(), p2: p2.clone(), p3: p3.clone(), normal, center, mat: mat.clone()}
-    }
-    pub fn new_rect(corner: &Vec3, delta_x: &Vec3, delta_y: &Vec3, mat: Material) -> Vec<Object> {
-        let tri = Self::new_triangle(corner, &(corner + delta_y), &(corner + delta_x + delta_y), &mat);
-        let tri2 = Self::new_triangle(&(corner + delta_x + delta_y), &(corner + delta_x), corner, &mat);
-        vec![tri, tri2]
+
+    fn calc_quadrilet(p: &Vec3, u: &Vec3, v: &Vec3, w: &Vec3) -> (f32, f32){
+        let alpha = w.dot(&p.cross(v));
+        let beta = w.dot(&u.cross(&p));
+        (alpha, beta)
     }
 
     fn intersect(&self, ray: &Ray) -> Option<HitInfo>{
@@ -128,7 +143,7 @@ impl Object {
                     }
                 }
             }
-            Self::Plane {pos, normal, mat} => {
+            Self::Plane {pos, normal, mat, plane_type} => {
                 //https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection.html
                 //pos-vec dot normal = 0
                 let mut n = normal.clone();
@@ -137,38 +152,41 @@ impl Object {
                 }
                 let denom = n.dot(&ray.dir);
                 let t = (pos - &ray.start).dot(&n) / denom;
-                if t > 0. {
+                if t > 0.{
                     let hit = HitInfo{p: &ray.start + &ray.dir * t, normal: n.clone(), material: mat.clone(), u: 0., v: 0.};
-                    return Some(hit);
-                }
-                None
-            }
-            Self::Triangle { p1, p2, p3, mat, normal , center } => {
-                let plane = Self::Plane { pos: center.clone(), normal: normal.clone(), mat: mat.clone()};
-                let hitp: Point;
-                match plane.intersect(ray) {
-                    Some(hit) => {
-                        hitp = hit.p;
+                    match plane_type {
+                        Planes::Plane() => return Some(hit),
+                        Planes::Disk {delta_x, delta_y, r:_ } => {
+                            let z = delta_x.cross(delta_y);
+                            let w = &z / &z.dot(&z);
+                            let (alpha, beta) = Self::calc_quadrilet(&(&hit.p-pos), delta_x, delta_y, &w);
+                            if plane_type.get_fn()(alpha, beta){
+                                return Some(hit);
+                            }
+                            return None;
+                        }   
+                        Planes::Rect {delta_x, delta_y } => {
+                            let n = delta_x.cross(delta_y);
+                            let w = &n / &n.dot(&n);
+                            let (alpha, beta) = Self::calc_quadrilet(&(&hit.p-pos), delta_x, delta_y, &w);
+                            if plane_type.get_fn()(alpha, beta){
+                                return Some(hit);
+                            }
+                            return None;
                         }
-                    None => return None
-                }
-                //triangle area
-                let tri_a = (p2 - p1).cross(&(p3 - p1)).length() / 2.;
-                let a1 = (p1 - &hitp).cross(&(p2 - &hitp)).length() / 2.;
-                let a2 = (p2 - &hitp).cross(&(p3 - &hitp)).length() / 2.;
-                let a3 = (p3 - &hitp).cross(&(p1 - &hitp)).length() / 2.;
-                if (a1 + a2 + a3) > tri_a + 0.0001 {
-                    return None;
-                }
-                else {
-                    let mut n = normal.clone();
-                    if n.dot(&ray.dir) > 0. {
-                        n = n * -1.;
+                        Planes::Triangle {delta_x, delta_y } => {
+                            let n = delta_x.cross(delta_y);
+                            let w = &n / &n.dot(&n);
+                            let (alpha, beta) = Self::calc_quadrilet(&(&hit.p-pos), delta_x, delta_y, &w);
+                            if plane_type.get_fn()(alpha, beta){
+                                return Some(hit);
+                            }
+                            return None;
+                        }
                     }
-                    return Some(HitInfo{p: hitp, normal: n, material: mat.clone(), u: 0., v: 0.});
                 }
+                None  
             }
-
             Self::BoundBox { min, max, inside } => {
                 let tx0 = ((min.x - ray.start.x)/ray.dir.x).min((max.x - ray.start.x)/ray.dir.x);
                 let tx1 = ((min.x - ray.start.x)/ray.dir.x).max((max.x - ray.start.x)/ray.dir.x);

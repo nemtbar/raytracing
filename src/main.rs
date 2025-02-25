@@ -5,7 +5,7 @@ mod textures;
 use image::RgbImage;
 #[allow(unused_imports)]
 use image::{ImageBuffer, ImageReader};
-use geometry::{Camera, Material, Object, Reflection};
+use geometry::{Camera, Material, Object, Planes, Reflection};
 use rand::Rng;
 use render::{display, transform, Pixel};
 use textures::{Texture, Picture};
@@ -52,12 +52,11 @@ fn frag(x: usize, y: usize, input: &Uniforms) -> Pixel {
 
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
-    let image: RgbImage = ImageReader::open("marked.jpg").unwrap().decode().unwrap().into_rgb8();
-    let img = Picture::new(image);
-    let _tex = Texture::Checker { color1: Vec3::new1(1.), color2: Vec3::new1(0.), size: 0.5};
+    let image: RgbImage = ImageReader::open("earthmap.jpg").unwrap().decode().unwrap().into_rgb8();
+    let _img = Picture::new(image);
     let input = Uniforms {
-        sample_count: 1, 
-        bounce_count: 3,
+        sample_count: 50, 
+        bounce_count: 50,
         offset: WIDTH as f32/1000.,
         cam: Camera::new(
             &Vec3::new(0., -7., 6.),
@@ -67,9 +66,25 @@ fn main() {
             0.
         ),
         objects: vec![
-            
-            Object::Plane { pos: Vec3::new(0., 0., 0.), normal: Vec3::new(0., 0., 1.), mat: Material {refl: Reflection::Diffuse(), tex: Texture::Solid { color: Vec3::new1(1.)}}},
-            Object::Sphere { pos: Vec3::new(0., 0., 3.), rad: 3., mat: Material {tex: Texture::Img {img}, refl: Reflection::Diffuse()} }
+            Object::Sphere { pos: Vec3::new(-5.5, 0.5, 3.), rad: 2., mat: Material {refl: Reflection::Metal { roughness: 0. }, tex: Texture::Solid { color: Vec3::new1(1.) }} },
+            Object::Plane { pos: Vec3::new(-2., 3., 3.), 
+                normal: Vec3::new(0., -1., 0.), 
+                mat: Material {refl: Reflection::Diffuse(), tex: Texture::Solid { color: Vec3::new(1., 0., 0.)}},
+                plane_type: Planes::Triangle {delta_x: Vec3::new(6., 0., 0.), delta_y: Vec3::new(2., 0., 1.), }
+
+            },
+            Object::Plane { pos: Vec3::new(2., 2., 3.), 
+                normal: Vec3::new(-0.5, 0., 1.).normalize(), 
+                mat: Material {refl: Reflection::Diffuse(), tex: Texture::Solid { color: Vec3::new(0., 1., 0.)}},
+                plane_type: Planes::Disk {delta_x: Vec3::new(1., 0., 0.), delta_y: Vec3::new(0., 0.0, 0.5), r: 5.}
+
+            },
+            Object::Plane { pos: Vec3::new(0., 0., 0.), 
+                normal: Vec3::new(0., 0., 1.), 
+                mat: Material {refl: Reflection::Diffuse(), tex: Texture::Solid { color: Vec3::new1(1.)}},
+                plane_type: Planes::Plane()
+            },
+            //Object::Sphere { pos: Vec3::new(0., 0., 3.), rad: 3., mat: Material {tex: Texture::Img {img}, refl: Reflection::Diffuse()} }
         ]
     };
 

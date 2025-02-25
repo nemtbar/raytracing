@@ -1,33 +1,26 @@
-use crate::vec3::*;
+use crate::vec3::Vec3;
 use image::RgbImage;
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct Picture {
     pub width: u32,
     pub height: u32,
-    pixels: Vec<Vec<[u8; 3]>>
+    pub data: Arc<Vec<u8>>,
 }
 
 impl Picture {
     pub fn new(img: RgbImage) -> Self {
         let (width, height) = img.dimensions();
-        let raw = img.into_vec();
-        let mut pixels: Vec<Vec<[u8; 3]>> = vec![];
-        let width3 = (width*3) as usize;
-        for begin in (0..raw.len()).step_by(width3){
-            pixels.push(vec![]);
-            for pix in (begin..begin+width3).step_by(3){
-                let last = pixels.len()-1;
-                pixels[last].push([raw[pix], raw[pix+1], raw[pix+2]]);
-
-            }
-        }
-        Self { width, height, pixels}
+        Self { width, height, data: Arc::new(img.into_vec())}
     }
 
     pub fn get_pixel(&self, x: usize, y: usize) -> Vec3{
-        let pix =  self.pixels[y][x];
-        Vec3::new(pix[0] as f32/255., pix[1] as f32/255., pix[2] as f32/255.,)
+        let y_index = y*(self.width*3) as usize;
+        let index = x*3+y_index;
+        Vec3::new(self.data[index] as f32/255.0,
+                self.data[index+1] as f32/255.0,
+                self.data[index+2] as f32/255.0)
     }
 }
 
