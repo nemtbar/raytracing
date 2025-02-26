@@ -23,6 +23,14 @@ pub struct Material {
     pub tex: Texture
 }
 
+impl Default for Material{
+    fn default() -> Self {
+        Self{
+            refl: Reflection::Diffuse(),
+            tex: Texture::Solid { color: Vec3::new1(1.) }
+        }
+    }
+}
 fn reflectance(cos: f32, eta: f32) -> f32 {
     //Schlick's approximation
     let r0 = ((1. - eta) / (1. + eta)).powi(2);
@@ -83,27 +91,26 @@ fn overlap(min1: f32, max1: f32, min2: f32, max2: f32) -> bool {
 
 pub enum Object {
     Sphere {pos: Vec3, rad: f32, mat: Material},
-    Plane {pos: Vec3, normal: Vec3, plane_type: Planes, mat: Material},
+    Plane {pos: Vec3, normal: Vec3, mat: Material},
     BoundBox {min: Vec3, max: Vec3, inside: Vec<Object>},
+    Quad {pos: Vec3, delta_x: Vec3, delta_y: Vec3, kind: QuadType, mat: Material}
 }
 
-pub enum Planes{
-    Rect{delta_x: Vec3, delta_y: Vec3},
-    Triangle{delta_x: Vec3, delta_y: Vec3},
-    Disk{delta_x: Vec3, delta_y: Vec3, r: f32},
-    Plane()
+pub enum QuadType{
+    Rect(),
+    Triangle(),
+    Disk{r: f32},
 }
 
-impl Planes{
+impl QuadType{
     fn get_fn(&self)->Box<dyn Fn(f32, f32)->bool>{
         match self {
-            Self::Triangle{delta_x: _, delta_y: _} => Box::new(|a: f32, b: f32| a > 0. && b > 0. && a+b < 1.),
-            Self::Rect{delta_x: _, delta_y: _} => Box::new(|a: f32, b: f32| 0. < a && a < 1. && 0. < b && b < 1.),
-            Self::Disk{delta_x: _, delta_y: _, r} =>  {
+            Self::Triangle() => Box::new(|a: f32, b: f32| a > 0. && b > 0. && a+b < 1.),
+            Self::Rect() => Box::new(|a: f32, b: f32| 0. < a && a < 1. && 0. < b && b < 1.),
+            Self::Disk{r} =>  {
                 let r = *r;
                 Box::new(move |a: f32, b: f32| a*a+b*b < r)
             }
-            _ => Box::new(|_, _| true)
         }
     }
 }
@@ -143,7 +150,7 @@ impl Object {
                     }
                 }
             }
-            Self::Plane {pos, normal, mat, plane_type} => {
+            Self::Plane {pos, normal, mat} => {
                 //https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection.html
                 //pos-vec dot normal = 0
                 let mut n = normal.clone();
@@ -154,39 +161,24 @@ impl Object {
                 let t = (pos - &ray.start).dot(&n) / denom;
                 if t > 0.{
                     let hit = HitInfo{p: &ray.start + &ray.dir * t, normal: n.clone(), material: mat.clone(), u: 0., v: 0.};
-                    match plane_type {
-                        Planes::Plane() => return Some(hit),
-                        Planes::Disk {delta_x, delta_y, r:_ } => {
-                            let z = delta_x.cross(delta_y);
-                            let w = &z / &z.dot(&z);
-                            let (alpha, beta) = Self::calc_quadrilet(&(&hit.p-pos), delta_x, delta_y, &w);
-                            if plane_type.get_fn()(alpha, beta){
-                                return Some(hit);
-                            }
-                            return None;
-                        }   
-                        Planes::Rect {delta_x, delta_y } => {
-                            let n = delta_x.cross(delta_y);
-                            let w = &n / &n.dot(&n);
-                            let (alpha, beta) = Self::calc_quadrilet(&(&hit.p-pos), delta_x, delta_y, &w);
-                            if plane_type.get_fn()(alpha, beta){
-                                return Some(hit);
-                            }
-                            return None;
-                        }
-                        Planes::Triangle {delta_x, delta_y } => {
-                            let n = delta_x.cross(delta_y);
-                            let w = &n / &n.dot(&n);
-                            let (alpha, beta) = Self::calc_quadrilet(&(&hit.p-pos), delta_x, delta_y, &w);
-                            if plane_type.get_fn()(alpha, beta){
-                                return Some(hit);
-                            }
-                            return None;
-                        }
-                    }
+                    return Some(hit);
                 }
                 None  
             }
+            Self::Quad { pos, delta_x, delta_y, kind, mat } => {
+                let n = delta_x.cross(delta_y);
+                if let Some(hit) = Self::intersect(&Self::Plane { pos: pos.clone(), normal: n.normalize(), mat: mat.clone()}, ray) {
+                    let w = &n /( -1. * &n.dot(&n));
+                    let p = pos - &hit.p;
+                    let (alpha, beta) = Self::calc_quadrilet(&p, delta_x, delta_y, &w);
+                    if kind.get_fn()(alpha, beta){
+                        return Some(hit);
+                    }
+                    return None;
+                }
+
+                None
+            },
             Self::BoundBox { min, max, inside } => {
                 let tx0 = ((min.x - ray.start.x)/ray.dir.x).min((max.x - ray.start.x)/ray.dir.x);
                 let tx1 = ((min.x - ray.start.x)/ray.dir.x).max((max.x - ray.start.x)/ray.dir.x);
@@ -296,28 +288,27 @@ pub struct Camera {
 
 impl Camera {
     pub fn new(lookfrom: &Point, lookat: &Point, vertical_fov: f32, up: &Vec3, blur: f32) -> Self {
-    assert!(up.length() > 0.999 && up.length() < 1.001, "up vector must be normalized at Camera::new");
-    let focal_length = (lookfrom - lookat).length();
-    let theta = vertical_fov.to_radians();
-    let h = (theta/2.).tan();
+        assert!(up.length() > 0.999 && up.length() < 1.001, "up vector must be normalized at Camera::new");
+        let focal_length = (lookfrom - lookat).length();
+        let theta = vertical_fov.to_radians();
+        let h = (theta/2.).tan();
 
-    let viewport_height = 2. * h * focal_length;
-    let viewport_width = WIDTH as f32 / HEIGHT as f32 * viewport_height;
+        let viewport_height = 2. * h * focal_length;
+        let viewport_width = WIDTH as f32 / HEIGHT as f32 * viewport_height;
 
-    let w = (lookfrom - lookat).normalize();
-    assert!(w.dot(&up).abs() < 0.999, "up vector must not be parallel to the lookfrom-lookat vector\nat Camera::new");
-    let u = up.cross(&w).normalize();
-    let v = w.cross(&u);
+        let w = (lookfrom - lookat).normalize();
+        assert!(w.dot(&up).abs() < 0.999, "up vector must not be parallel to the lookfrom-lookat vector\nat Camera::new");
+        let u = up.cross(&w).normalize();
+        let v = w.cross(&u);
 
-    let viewport_u = u * viewport_width;
-    let viewport_v = -1. * &v * viewport_height;
-    let pixel_delta_u = &viewport_u / WIDTH as f32;
-    let pixel_delta_v = &viewport_v / HEIGHT as f32;
+        let viewport_u = u * viewport_width;
+        let viewport_v = -1. * &v * viewport_height;
+        let pixel_delta_u = &viewport_u / WIDTH as f32;
+        let pixel_delta_v = &viewport_v / HEIGHT as f32;
 
-    //let upper_left: Vec3 = lookfrom - (focal_length * &w) - (viewport_u / 2.) + (viewport_v / 2.);
-    let upper_left = Vec3::new(0., 0., 0.) - (viewport_u / 2.) - (viewport_v / 2.);
-    let pixel00 = upper_left + 0.5 * &(&pixel_delta_u + &pixel_delta_v);
-    Self { start: lookfrom.clone(), upper_left: pixel00, delta_x: pixel_delta_u, delta_y: pixel_delta_v, blur }
+        let upper_left: Vec3 = lookat - (viewport_u / 2.) - (viewport_v / 2.);
+        //let pixel00 = upper_left + 0.5 * &(&pixel_delta_u + &pixel_delta_v);
+        Self { start: lookfrom.clone(), upper_left, delta_x: pixel_delta_u, delta_y: pixel_delta_v, blur }
     }
 
     pub fn shoot(&self, ux: f32, uy: f32) -> Ray {

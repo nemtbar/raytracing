@@ -5,7 +5,7 @@ mod textures;
 use image::RgbImage;
 #[allow(unused_imports)]
 use image::{ImageBuffer, ImageReader};
-use geometry::{Camera, Material, Object, Planes, Reflection};
+use geometry::{Camera, Material, Object, QuadType, Reflection};
 use rand::Rng;
 use render::{display, transform, Pixel};
 use textures::{Texture, Picture};
@@ -53,38 +53,29 @@ fn frag(x: usize, y: usize, input: &Uniforms) -> Pixel {
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
     let image: RgbImage = ImageReader::open("earthmap.jpg").unwrap().decode().unwrap().into_rgb8();
-    let _img = Picture::new(image);
+    let img = Picture::new(image);
+    let up = Vec3::new(0., 0., 1.);
+    let back = Vec3::new(0., 1., 0.);
+    let side = Vec3::new(1., 0., 0.);
+    let mirror = Material{refl:Reflection::Metal { roughness: 0. }, tex: Texture::Solid { color: Vec3::new1(1.) }};
     let input = Uniforms {
-        sample_count: 50, 
+        sample_count: 200, 
         bounce_count: 50,
         offset: WIDTH as f32/1000.,
         cam: Camera::new(
-            &Vec3::new(0., -7., 6.),
-            &Vec3::default(),
+            &Vec3::new(0., 0., 3.),
+            &Vec3::new(-3., 3., 3.),
             95., 
             &Vec3::new(0., 0., 1.),
             0.
         ),
         objects: vec![
-            Object::Sphere { pos: Vec3::new(-5.5, 0.5, 3.), rad: 2., mat: Material {refl: Reflection::Metal { roughness: 0. }, tex: Texture::Solid { color: Vec3::new1(1.) }} },
-            Object::Plane { pos: Vec3::new(-2., 3., 3.), 
-                normal: Vec3::new(0., -1., 0.), 
-                mat: Material {refl: Reflection::Diffuse(), tex: Texture::Solid { color: Vec3::new(1., 0., 0.)}},
-                plane_type: Planes::Triangle {delta_x: Vec3::new(6., 0., 0.), delta_y: Vec3::new(2., 0., 1.), }
-
-            },
-            Object::Plane { pos: Vec3::new(2., 2., 3.), 
-                normal: Vec3::new(-0.5, 0., 1.).normalize(), 
-                mat: Material {refl: Reflection::Diffuse(), tex: Texture::Solid { color: Vec3::new(0., 1., 0.)}},
-                plane_type: Planes::Disk {delta_x: Vec3::new(1., 0., 0.), delta_y: Vec3::new(0., 0.0, 0.5), r: 5.}
-
-            },
-            Object::Plane { pos: Vec3::new(0., 0., 0.), 
-                normal: Vec3::new(0., 0., 1.), 
-                mat: Material {refl: Reflection::Diffuse(), tex: Texture::Solid { color: Vec3::new1(1.)}},
-                plane_type: Planes::Plane()
-            },
-            //Object::Sphere { pos: Vec3::new(0., 0., 3.), rad: 3., mat: Material {tex: Texture::Img {img}, refl: Reflection::Diffuse()} }
+            Object::Sphere { pos: Vec3::new(-1., 3., 1.5), rad: 1.5, mat: Material{refl: Reflection::Diffuse(), tex: Texture::Img { img }} },
+            Object::Quad { pos: Vec3::new(-3., 0., 0.), delta_x: &side*6., delta_y: &back*6., kind: QuadType::Rect(), mat: Material::default() },
+            Object::Quad { pos: Vec3::new(-3., 6., 0.), delta_x: &side*6., delta_y: &up*6., kind: QuadType::Rect(), mat: Material::default() },
+            Object::Quad { pos: Vec3::new(-3., 0., 0.), delta_x: &back*6., delta_y: &up*6., kind: QuadType::Rect(), mat: mirror.clone() },
+            Object::Quad { pos: Vec3::new(3., 0., 0.), delta_x: &back*6., delta_y: &up*6., kind: QuadType::Rect(), mat: mirror },
+            //Object::Quad { pos: Vec3::new(-3., 0., 6.), delta_x: &side*6., delta_y: &back*6., kind: QuadType::Rect(), mat: Material::default() }
         ]
     };
 
