@@ -60,24 +60,38 @@ fn frag(x: usize, y: usize, input: &Uniforms) -> Pixel {
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
     let image: RgbImage = ImageReader::open("earthmap.jpg").unwrap().decode().unwrap().into_rgb8();
-    let img = Picture::new(image);
-    let mat = Material::new(Reflection::Diffuse(), Texture::Solid { color: Vec3::new1(1.) }, Vec3::new1(1.));
+    let _img = Picture::new(image);
+    let mat = Material::new(Reflection::Diffuse(), Texture::Solid { color: Vec3::new1(1.) }, Vec3::new1(4.));
     let input = Uniforms {
         sample_count: 100, 
-        bounce_count: 50,
+        bounce_count: 5,
         offset: WIDTH as f32/1000.,
         cam: Camera::new(
-            &Vec3::new(0., -5., 2.),
-            &Vec3::default(),
+            &Vec3::new(0., -2., 3.3),
+            &Vec3::new(0., 0., 3.),
             95.,
             &Vec3::up(),
             0.
         ),
         objects: vec![
-            Object::Sphere { pos: Vec3::new(0., 0., 1.5), rad: 1.5, mat: Material{refl: Reflection::Diffuse(), tex: Texture::Img { img }, emmision: Vec3::new1(0.)} },
-            Object::new_quad(Vec3::new(0., 0., 0.), Vec3::new(5., 0., 0.), Vec3::new(0., 5., 0.), QuadType::Disk(), mat)
+            Object::Plane { pos: Vec3::default(), normal: Vec3::up(), mat: Material::default() }
+            //Object::Sphere { pos: Vec3::new(0., 4.5, 1.5), rad: 1.5, mat: Material{refl: Reflection::Metal { roughness: 0. }, tex: Texture::Solid { color: Vec3::new1(1.) }, emmision: Vec3::default()} },
+            // Object::new_quad(Vec3::new(-3., 0., 0.), Vec3::new(6., 0., 0.), Vec3::new(0., 6., 0.), QuadType::Rect(), Material::default()),
+            // Object::new_quad(Vec3::new(-3., 0., 6.), Vec3::new(6., 0., 0.), Vec3::new(0., 6., 0.), QuadType::Rect(), Material::default()),
+
+            // Object::new_quad(Vec3::new(-3., 0., 0.), Vec3::new(0., 6., 0.), Vec3::new(0., 0., 6.), QuadType::Rect(), Material{refl: Reflection::Diffuse(), tex: Texture::Solid { color: Vec3::new(1., 0.1, 0.1) }, emmision: Vec3::default()}),
+            // Object::new_quad(Vec3::new(3., 0., 0.), Vec3::new(0., 6., 0.), Vec3::new(0., 0., 6.), QuadType::Rect(), Material{refl: Reflection::Diffuse(), tex: Texture::Solid { color: Vec3::new(0.1, 1.0, 0.1) }, emmision: Vec3::default()}),
+
+            // Object::new_quad(Vec3::new(-3., 6., 0.), Vec3::new(6., 0., 0.), Vec3::new(0., 0., 6.), QuadType::Rect(), Material::default()),
+            // Object::new_quad(Vec3::new(-1.5, 1.5, 5.98), Vec3::new(3., 0., 0.), Vec3::new(0., 3., 0.), QuadType::Rect(), mat),
+
             ],
-        env_shader: Box::new(|_| Vec3::new1(0.))
+        env_shader: Box::new(|v|{
+            let col1 = Vec3::new(0.3843, 0.1294, 0.702);
+            let col2 = Vec3::new(0.018, 0.0157, 0.2039);
+            let value = v.dot(&Vec3::up()).max(0.);
+            col1.lerp(&col2, value)
+        } )
     };
 
     display(frag, input, "sample");

@@ -2,8 +2,6 @@ use image::{RgbImage, ImageBuffer, Rgb};
 use crate::{WIDTH, HEIGHT, Uniforms};
 use rayon::prelude::*;
 use indicatif::ProgressBar;
-use std::sync::Arc;
-
 #[derive(Clone, Copy, Default)]
 pub struct Pixel{
     pub r: u8,
@@ -22,9 +20,8 @@ where
     F: Fn(usize, usize, &Uniforms) -> Pixel + Sync + Send,
 {
     let mut arr: [Pixel; WIDTH] = [Pixel::default(); WIDTH];
-    let arc = Arc::new(input);
     arr.par_iter_mut().enumerate().for_each(|(x, pixel)|
-        *pixel = func(x, y, &arc)
+        *pixel = func(x, y, input)
     );
     arr
 }

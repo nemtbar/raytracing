@@ -63,7 +63,7 @@ impl Default for Material{
         Self{
             refl: Reflection::Diffuse(),
             tex: Texture::Solid { color: Vec3::new1(1.) },
-            emmision: Vec3::new1(1.)
+            emmision: Vec3::default()
         }
     }
 }
