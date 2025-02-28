@@ -8,6 +8,34 @@ pub struct HitInfo {
     pub v: f32
 }
 
+impl HitInfo {
+    pub fn get_color(&self, future: Vec3) -> Vec3{
+        let fin_color: Vec3;
+        match &self.material.tex {
+            Texture::Solid { color } => fin_color = color.clone(),
+            Texture::Checker{color1, color2, size} => {
+                let x = (self.p.x / size).round() as i32;
+                let y = (self.p.y / size).round() as i32;
+                let z = (self.p.z / size).round() as i32;
+
+                if (x+y+z)%2 == 0 {
+                    fin_color = color1.clone();
+                } else {
+                    fin_color = color2.clone();
+                }
+            }
+            Texture::Img{img} => {
+                assert!(self.u >= 0. && self.u <= 1. && self.v >= 0. && self.v <= 1., "texture coord not in 0-1");
+                let x = (self.u * (img.width as f32)) as usize;
+                let y = (self.v * (img.height as f32)) as usize;
+                let color = img.get_pixel(x, y);
+                fin_color = color;
+            }
+        }
+        &self.material.emmision + fin_color * future * 0.9 
+    }
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub enum Reflection {
     Diffuse(),
@@ -20,14 +48,22 @@ pub enum Reflection {
 #[derive(Clone, Debug)]
 pub struct Material {
     pub refl: Reflection,
-    pub tex: Texture
+    pub tex: Texture,
+    pub emmision: Vec3
+}
+
+impl Material {
+    pub fn new(refl: Reflection, tex: Texture, emmision: Vec3)-> Self {
+        Self { refl, tex, emmision }
+    }
 }
 
 impl Default for Material{
     fn default() -> Self {
         Self{
             refl: Reflection::Diffuse(),
-            tex: Texture::Solid { color: Vec3::new1(1.) }
+            tex: Texture::Solid { color: Vec3::new1(1.) },
+            emmision: Vec3::new1(1.)
         }
     }
 }
@@ -93,24 +129,21 @@ pub enum Object {
     Sphere {pos: Vec3, rad: f32, mat: Material},
     Plane {pos: Vec3, normal: Vec3, mat: Material},
     BoundBox {min: Vec3, max: Vec3, inside: Vec<Object>},
-    Quad {pos: Vec3, delta_x: Vec3, delta_y: Vec3, kind: QuadType, mat: Material}
+    Quad {pos: Vec3, delta_x: Vec3, delta_y: Vec3, kind: QuadType, n: Vec3, w: Vec3, mat: Material}
 }
 
 pub enum QuadType{
     Rect(),
     Triangle(),
-    Disk{r: f32},
+    Disk(),
 }
 
 impl QuadType{
-    fn get_fn(&self)->Box<dyn Fn(f32, f32)->bool>{
+    fn get_fn(&self)->impl Fn(f32, f32)->bool{
         match self {
-            Self::Triangle() => Box::new(|a: f32, b: f32| a > 0. && b > 0. && a+b < 1.),
-            Self::Rect() => Box::new(|a: f32, b: f32| 0. < a && a < 1. && 0. < b && b < 1.),
-            Self::Disk{r} =>  {
-                let r = *r;
-                Box::new(move |a: f32, b: f32| a*a+b*b < r)
-            }
+            Self::Triangle() => |a: f32, b: f32| a > 0. && b > 0. && a+b < 1.,
+            Self::Rect() => |a: f32, b: f32| 0. < a && a < 1. && 0. < b && b < 1.,
+            Self::Disk() => |a: f32, b: f32| a*a+b*b < 1.
         }
     }
 }
@@ -152,7 +185,7 @@ impl Object {
             }
             Self::Plane {pos, normal, mat} => {
                 //https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection.html
-                //pos-vec dot normal = 0
+                //pos-hitP dot normal = 0
                 let mut n = normal.clone();
                 if n.dot(&ray.dir) > 0. {
                     n = n * -1.;
@@ -165,13 +198,13 @@ impl Object {
                 }
                 None  
             }
-            Self::Quad { pos, delta_x, delta_y, kind, mat } => {
-                let n = delta_x.cross(delta_y);
-                if let Some(hit) = Self::intersect(&Self::Plane { pos: pos.clone(), normal: n.normalize(), mat: mat.clone()}, ray) {
-                    let w = &n /( -1. * &n.dot(&n));
+            Self::Quad { pos, delta_x, delta_y, kind, n, w, mat } => {
+                if let Some(mut hit) = Self::intersect(&Self::Plane { pos: pos.clone(), normal: n.normalize(), mat: mat.clone()}, ray) {
                     let p = pos - &hit.p;
-                    let (alpha, beta) = Self::calc_quadrilet(&p, delta_x, delta_y, &w);
+                    let (alpha, beta) = Self::calc_quadrilet(&p, delta_x, delta_y, w);
                     if kind.get_fn()(alpha, beta){
+                        hit.u = alpha;
+                        hit.v = beta;
                         return Some(hit);
                     }
                     return None;
@@ -196,7 +229,7 @@ impl Object {
             }
         }
     }
-    pub fn bounce(ray: &Ray, objs: &Vec<Object>, max_bounce: u8) -> Vec3{
+    pub fn bounce(ray: &Ray, objs: &Vec<Object>, max_bounce: u8, env_shader: &Box<dyn Fn(&Vec3)->Vec3+Send+Sync>) -> Vec3{
         assert!(ray.dir.length() > 0.999 && ray.dir.length() < 1.001);
         if max_bounce <= 0 {
             return Vec3::new(0., 0., 0.);
@@ -205,41 +238,20 @@ impl Object {
         match Self::hit_all(ray, objs) {
             Some(hit) => {
                 let r = scatter(ray, &hit);
-                let future = Self::bounce(&r, objs, max_bounce - 1) * 0.9;
-                match hit.material.tex {
-                    Texture::Solid { color } => return color * future,
-                    Texture::Checker{color1, color2, size} => {
-                        let x = (hit.p.x / size).round() as i32;
-                        let y = (hit.p.y / size).round() as i32;
-                        let z = (hit.p.z / size).round() as i32;
-
-                        if (x+y+z)%2 == 0 {
-                            return color1 * future
-                        } else {
-                            return color2 * future;
-                        }
-                    }
-                    Texture::Img{img} => {
-                        assert!(hit.u >= 0. && hit.u <= 1. && hit.v >= 0. && hit.v <= 1., "texture coord not in 0-1");
-                        let x = (hit.u * (img.width as f32)) as usize;
-                        let y = (hit.v * (img.height as f32)) as usize;
-                        let color = img.get_pixel(x, y);
-                        color * future
-                    }
-                }
+                let future = Self::bounce(&r, objs, max_bounce - 1, env_shader);
+                hit.get_color(future)
 
             }
 
             None => {
                 
-                let value = (ray.dir.z + 1.) / 2.;
-                return Vec3::new(1., 1., 1.).lerp(&Vec3::new(0.5, 0.7, 1.), value);
+                env_shader(&ray.dir)
             }
         } 
     }
    
     
-    pub fn hit_all(ray: &Ray, lis: &Vec<Object>) -> Option<HitInfo>{
+    pub fn hit_all(ray: &Ray, lis: &Vec<Self>) -> Option<HitInfo>{
         let mut inf: Option<HitInfo> = None;
         let mut min_dist = 100000.;
         for obj in lis {
@@ -262,6 +274,12 @@ impl Object {
         }
 
         inf
+    }
+
+    pub fn new_quad(pos: Vec3, delta_x: Vec3, delta_y: Vec3, kind: QuadType, mat: Material) -> Self{
+        let n = delta_y.cross(&delta_x);
+        let w = &n / &n.dot(&n);
+        Self::Quad { pos, delta_x, delta_y, kind, n, w, mat }
     }
 }
 
@@ -307,7 +325,6 @@ impl Camera {
         let pixel_delta_v = &viewport_v / HEIGHT as f32;
 
         let upper_left: Vec3 = lookat - (viewport_u / 2.) - (viewport_v / 2.);
-        //let pixel00 = upper_left + 0.5 * &(&pixel_delta_u + &pixel_delta_v);
         Self { start: lookfrom.clone(), upper_left, delta_x: pixel_delta_u, delta_y: pixel_delta_v, blur }
     }
 
@@ -316,6 +333,7 @@ impl Camera {
         let mut rand_disk_x: f32;
         let mut rand_disk_y: f32;
         loop {
+            //needed for focus and blur
             rand_disk_x = rand::thread_rng().gen_range(-1.0..1.0);
             rand_disk_y = rand::thread_rng().gen_range(-1.0..1.0);
             if rand_disk_x * rand_disk_x + rand_disk_y * rand_disk_y <= 1. || count > 50{

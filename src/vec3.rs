@@ -13,6 +13,17 @@ impl Vec3 {
     pub const fn new(x: f32, y: f32, z: f32) -> Self{
         Vec3{x, y, z}
     }
+    pub const fn up()->Self{
+        Self{x: 0., y: 0., z: 1.}
+    }
+
+    pub const fn side()->Self{
+        Self{x: 1., y: 0., z: 0.}
+    }
+
+    pub const fn back()->Self{
+        Self{x: 0., y: 1., z: 0.}
+    }
     pub const fn new1(x: f32) -> Self{
         Vec3{x, y: x, z: x}
     }
@@ -216,6 +227,20 @@ impl Mul for Vec3 {
 
     fn mul(self, rhs: Self) -> Self::Output {
         &self * &rhs
+    }
+}
+impl Mul<&Vec3> for Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: &Vec3) -> Self::Output {
+        &self * rhs
+    }
+}
+impl Mul<Vec3> for &Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: Vec3) -> Self::Output {
+        self * &rhs
     }
 }
 //matrix multiplication
