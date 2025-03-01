@@ -1,9 +1,10 @@
+#![allow(unused_imports)]
+
 mod geometry;
 mod render;
 mod vec3;
 mod textures;
 use image::RgbImage;
-#[allow(unused_imports)]
 use image::{ImageBuffer, ImageReader};
 use geometry::{Camera, Material, Object, QuadType, Reflection};
 use rand::Rng;
@@ -59,11 +60,20 @@ fn frag(x: usize, y: usize, input: &Uniforms) -> Pixel {
 
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
-    let image: RgbImage = ImageReader::open("earthmap.jpg").unwrap().decode().unwrap().into_rgb8();
-    let _img = Picture::new(image);
-    let mat = Material::new(Reflection::Diffuse(), Texture::Solid { color: Vec3::new1(1.) }, Vec3::new1(4.));
-    let input = Uniforms {
-        sample_count: 100, 
+    let image: RgbImage = ImageReader::open("moon3.jpg").unwrap().decode().unwrap().into_rgb8();
+    let img = Picture::new(image);
+    let mat = Material::new(Reflection::Diffuse(), Texture::Img { img }, Vec3::default());
+    let star_mat = Material{refl: Reflection::Diffuse(), tex: Texture::Solid { color: Vec3::new1(1.) }, emmision: Vec3::new1(2.)};
+    let mut stars: Vec<Object> = vec![];
+    for n in -20..20{
+        let i = n as f32*0.25;
+        let rand = Vec3::random();
+        let pos = Vec3::new(rand.x*i*200., rand.y*i*100_f32.abs()+100., rand.z.abs()*80.);
+        let star = Object::Sphere { pos, rad: Vec3::random().x.abs(), mat: star_mat.clone() };
+        stars.push(star);
+    }
+    let mut input = Uniforms {
+        sample_count: 1000, 
         bounce_count: 5,
         offset: WIDTH as f32/1000.,
         cam: Camera::new(
@@ -74,17 +84,9 @@ fn main() {
             0.
         ),
         objects: vec![
-            Object::Plane { pos: Vec3::default(), normal: Vec3::up(), mat: Material::default() }
-            //Object::Sphere { pos: Vec3::new(0., 4.5, 1.5), rad: 1.5, mat: Material{refl: Reflection::Metal { roughness: 0. }, tex: Texture::Solid { color: Vec3::new1(1.) }, emmision: Vec3::default()} },
-            // Object::new_quad(Vec3::new(-3., 0., 0.), Vec3::new(6., 0., 0.), Vec3::new(0., 6., 0.), QuadType::Rect(), Material::default()),
-            // Object::new_quad(Vec3::new(-3., 0., 6.), Vec3::new(6., 0., 0.), Vec3::new(0., 6., 0.), QuadType::Rect(), Material::default()),
-
-            // Object::new_quad(Vec3::new(-3., 0., 0.), Vec3::new(0., 6., 0.), Vec3::new(0., 0., 6.), QuadType::Rect(), Material{refl: Reflection::Diffuse(), tex: Texture::Solid { color: Vec3::new(1., 0.1, 0.1) }, emmision: Vec3::default()}),
-            // Object::new_quad(Vec3::new(3., 0., 0.), Vec3::new(0., 6., 0.), Vec3::new(0., 0., 6.), QuadType::Rect(), Material{refl: Reflection::Diffuse(), tex: Texture::Solid { color: Vec3::new(0.1, 1.0, 0.1) }, emmision: Vec3::default()}),
-
-            // Object::new_quad(Vec3::new(-3., 6., 0.), Vec3::new(6., 0., 0.), Vec3::new(0., 0., 6.), QuadType::Rect(), Material::default()),
-            // Object::new_quad(Vec3::new(-1.5, 1.5, 5.98), Vec3::new(3., 0., 0.), Vec3::new(0., 3., 0.), QuadType::Rect(), mat),
-
+            Object::Sphere { pos: Vec3::new(0., 0., -120.), rad: 120., mat: Material::default() },
+            Object::Sphere { pos: Vec3::new(100., 300., 50.), rad: 15., mat },
+            Object::Sphere {pos: Vec3::new(70., 110., -60.), rad: 20., mat: Material {refl: Reflection::Diffuse(), tex:Texture::Solid { color: Vec3::new1(1.) }, emmision: Vec3::new1(10.)}}
             ],
         env_shader: Box::new(|v|{
             let col1 = Vec3::new(0.3843, 0.1294, 0.702);
@@ -93,6 +95,6 @@ fn main() {
             col1.lerp(&col2, value)
         } )
     };
-
+    input.objects.append(&mut stars);
     display(frag, input, "sample");
 }
