@@ -39,7 +39,7 @@ impl Object {
     }
 
     fn intersect(&self, ray: &Ray) -> Option<HitInfo>{
-        assert!(ray.dir.length() > 0.999 && ray.dir.length() < 1.001);
+        assert!(ray.dir.is_normalized());
         match self {
             //https://kylehalladay.com/blog/tutorial/math/2013/12/24/Ray-Sphere-Intersection.html
             Self::Sphere {pos, rad, mat} => {
@@ -112,7 +112,7 @@ impl Object {
         }
     }
     pub fn bounce(ray: &Ray, objs: &Vec<Object>, max_bounce: u8, env_shader: &Box<dyn Fn(&Vec3)->Vec3+Send+Sync>) -> Vec3{
-        assert!(ray.dir.length() > 0.999 && ray.dir.length() < 1.001);
+        assert!(ray.dir.is_normalized());
         if max_bounce <= 0 {
             return Vec3::new(0., 0., 0.);
         }
@@ -167,23 +167,69 @@ impl Object {
 
 
 
-pub mod AbstractObject {
-
+pub mod abstract_object {
     use super::*;
-    pub fn new_cylinder(pos: &Vec3, height: f32, faces: u32, radius: f32, mat: Material)-> Vec<Object>{
+    pub fn new_cylinder(pos: &Vec3, delta_y: &Vec3, faces: u32, radius: f32, fill: bool, mat: Material)-> Vec<Object>{
         let mut rects: Vec<Object> = vec![];
+        let mut top: Vec<Vec3> = vec![];
+        let mut bottom: Vec<Vec3> = vec![];
         let angle = 360/faces;
         let rad2 = radius * radius;
         //c^2 = a^2+b^2-2*a*b*cos(theta)
         let width = (2.* rad2 - 2.*rad2*f32::to_radians(angle as f32).cos()).abs().sqrt();
+        let base_z = delta_y.normalize();
+        let trans = Vec3::calc_new_bases(&base_z);
         for i in (0..360).step_by(angle as usize){
-            let rect_pos = Vec3::back().rot_z(i as f32);
-            let delta_y = Vec3::new(0., 0., height);
+            let rect_pos = pos+Vec3::back().rot_z(i as f32)*&trans;
             let delta_x = delta_y.cross(&(&rect_pos-pos)).normalize()*width;
-            let corner = rect_pos - &delta_x/2.- &delta_y/2.;
-            let rect = Object::new_quad(corner, delta_x,delta_y, QuadType::Rect(), mat.clone());
+            let corner = rect_pos - &delta_x/2.- delta_y/2.;
+            if fill{
+                top.push(&corner+&delta_x+delta_y);
+                bottom.push(&corner+&delta_x);
+            }
+            let rect = Object::new_quad(corner, delta_x.clone(), delta_y.clone(), QuadType::Rect(), mat.clone());
             rects.push(rect);
         }
+        if fill{
+            let mut top_obj = concave_n_poly(top, mat.clone());
+            let mut bottom_obj = concave_n_poly(bottom, mat.clone());
+            rects.append(&mut top_obj);
+            rects.append(&mut bottom_obj);
+        }
         rects
+    }
+
+    pub fn concave_n_poly(points: Vec<Vec3>, mat: Material) -> Vec<Object>{
+        let mut triangles: Vec<Object> = vec![];
+        let last = &points[points.len()-1];
+        for i in 1..points.len()-1{
+            let delta_x = &points[i-1] - last;
+            let delta_y = &points[i] - last;
+
+            let triangle = Object::new_quad(last.clone(), delta_x, delta_y, QuadType::Triangle(), mat.clone());
+            triangles.push(triangle);
+        }
+        triangles
+    }
+
+    pub fn new_pyramid(pos: &Vec3, size: f32, delta_y: &Vec3, rotation: f32, mat: Material) -> Vec<Object>{
+        let mut objs: Vec<Object> = vec![];
+        let mut points: Vec<Vec3> = vec![];
+        let trans = &Vec3::calc_new_bases(&delta_y.normalize());
+        points.push((pos-Vec3::side()*size/2.-Vec3::back()*size/2.).rot_z(rotation)*trans-delta_y/2.);
+        points.push((pos+Vec3::side()*size/2.-Vec3::back()*size/2.).rot_z(rotation)*trans-delta_y/2.);
+        points.push((pos+Vec3::side()*size/2.+Vec3::back()*size/2.).rot_z(rotation)*trans-delta_y/2.);
+        points.push((pos-Vec3::side()*size/2.+Vec3::back()*size/2.).rot_z(rotation)*trans-delta_y/2.);
+        points.push(points[0].clone());
+        points.push(pos+delta_y/2.);
+
+        objs.push(Object::new_quad(points[0].clone(), &points[1]-&points[0], &points[3]-&points[0], QuadType::Rect(), mat.clone()));
+        objs.append(&mut concave_n_poly(points, mat));
+        objs
+    }
+
+    pub fn new_box(pos: &Vec3, delta_y: &Vec3, size: f32, mat: Material)->Vec<Object>{
+        let radius = (2.*f32::powi(size, 2)).sqrt()/2.;
+        self::new_cylinder(pos, delta_y, 4, radius, true, mat)
     }
 }

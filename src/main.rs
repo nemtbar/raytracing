@@ -43,7 +43,7 @@ impl Uniforms {
         Self {sample_count, bounce_count, offset, cam, objects, env_shader}
     }
     pub fn get_env_shader() -> Box<dyn Fn(&Vec3)->Vec3+Sync+Send>{
-        let clos = |v: &Vec3| Vec3::lerp(&Vec3::new1(1.),&Vec3::new(0.5, 0.5, 0.95), (v.dot(&(Vec3::up()*-1.)).max(0.)).abs());
+        let clos = |v: &Vec3| Vec3::lerp(&Vec3::new1(1.),&Vec3::new(0.5, 0.7, 1.), v.dot(&Vec3::up()).max(0.));
         Box::new(clos)
     }
 }
@@ -65,5 +65,5 @@ fn frag(x: usize, y: usize, input: &Uniforms) -> Pixel {
 
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
-    display(frag, scenes::lalaland(), "sample");
+    display(frag, scenes::scene3(), "sample");
 }

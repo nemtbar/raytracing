@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Sub, };
 use rand::Rng;
 
 #[derive(Default, Clone, Debug, PartialEq)]
@@ -107,6 +107,36 @@ impl Vec3 {
         ];
         self.mat_mult(&rot)
     }    
+    pub fn is_normalized(&self)->bool{
+        let len = self.length();
+        len > 0.998 && len < 1.002
+    }
+
+    pub fn calc_new_bases(base_z: &Self)->Vec<Vec<f32>>{
+
+        if base_z.dot(&Vec3::up()) > 0.998{
+            return vec![
+                vec![1., 0., 0.],
+                vec![0., 1., 0.],
+                vec![0., 0., 1.],
+            ];
+        } else if base_z.dot(&Vec3::up()) < -0.998 {
+            return vec![
+                vec![1., 0., 0.],
+                vec![0., 1., 0.],
+                vec![0., 0., -1.],
+            ];
+        } else {
+            let base_x = base_z.cross(&Vec3::up());
+            let base_y = base_z.cross(&base_x);
+            return vec![
+                vec![base_x.x, base_y.x, base_z.x],
+                vec![base_x.y, base_y.y, base_z.y],
+                vec![base_x.z, base_y.z, base_z.z],
+            ];
+        }
+
+    }
 }
 // add
 impl Add<&Vec3> for &Vec3{
@@ -249,6 +279,28 @@ impl Mul<Vec<Vec<f32>>> for Vec3 {
         self.mat_mult(&rhs)
     }
 }
+impl Mul<&Vec<Vec<f32>>> for Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: &Vec<Vec<f32>>) -> Self::Output {
+        self.mat_mult(rhs)
+    }
+}
+
+impl Mul<Vec<Vec<f32>>> for &Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: Vec<Vec<f32>>) -> Self::Output {
+        self.mat_mult(&rhs)
+    }
+}
+impl Mul<&Vec<Vec<f32>>> for &Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: &Vec<Vec<f32>>) -> Self::Output {
+        self.mat_mult(rhs)
+    }
+}
 
 impl Mul<&Vec3> for f32 {
     type Output = Vec3;
@@ -288,3 +340,4 @@ impl Div<f32> for Vec3{
         &self / &rhs
     }
 }
+

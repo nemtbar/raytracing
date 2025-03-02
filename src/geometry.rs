@@ -111,7 +111,7 @@ pub fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
                 sol.dir = snell(&ray.dir, &hit.normal, 1./reflective);
 
             }
-            assert!(sol.dir.length() > 0.999 && sol.dir.length() < 1.001, "scatter glass");
+            assert!(sol.dir.is_normalized(), "scatter glass");
         }
 
     }
@@ -141,7 +141,7 @@ pub struct Camera {
 
 impl Camera {
     pub fn new(lookfrom: &Point, lookat: &Point, vertical_fov: f32, up: &Vec3, blur: f32) -> Self {
-        assert!(up.length() > 0.999 && up.length() < 1.001, "up vector must be normalized at Camera::new");
+        assert!(up.is_normalized(), "up vector must be normalized at Camera::new");
         let focal_length = (lookfrom - lookat).length();
         let theta = vertical_fov.to_radians();
         let h = (theta/2.).tan();
