@@ -1,4 +1,4 @@
-use crate::{Vec3, Material, Ray, HitInfo, Texture, scatter};
+use crate::{Vec3, geometry::{Material, HitInfo, Ray}, textures::Texture, geometry::scatter};
 
 
 pub enum Object {

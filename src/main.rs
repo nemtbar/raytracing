@@ -1,52 +1,24 @@
 #![allow(unused_imports)]
 
-mod geometry;
-mod render;
-mod vec3;
-mod textures;
-mod objects;
-mod scenes;
-use geometry::*;
-use render::*;
-use vec3::Vec3;
-use textures::*;
-use objects::*;
+use raytracing::{
+    Uniforms,
+    geometry::*,
+    render::*,
+    vec3::Vec3,
+    textures::*,
+    objects::*,
+};
 
+mod scenes;
+use scenes::{lalaland, cylinder_test};
 use image::RgbImage;
 use image::{ImageBuffer, ImageReader};
 use rand::Rng;
 use std::env;
 
-pub const WIDTH: usize = 500;
-pub const HEIGHT: usize = 500;
+
 //https://raytracing.github.io/books/RayTracingInOneWeekend.html
 
-pub struct Uniforms {
-    pub sample_count: u32,
-    pub bounce_count: u8,
-    pub offset: f32,
-    pub cam: Camera,
-    pub objects: Vec<Object>,
-    pub env_shader: Box<dyn Fn(&Vec3) ->Vec3+Send+Sync>
-}
-
-impl Default for Uniforms {
-    fn default() -> Self {
-        let func = |v: &Vec3| Vec3::lerp(&Vec3::new1(1.),&Vec3::new(0.5, 0.5, 0.95), (v.dot(&(Vec3::up()*-1.)).max(0.)).abs());
-        Self { sample_count: 100, bounce_count: 50, offset: WIDTH as f32/1000., cam: Camera::default(), objects: vec![], env_shader: Box::new(func) }
-    }
-}    
-
-
-impl Uniforms {
-    pub fn new(sample_count: u32, bounce_count: u8, offset: f32, cam: Camera, objects: Vec<Object>, env_shader: Box<dyn Fn(&Vec3)->Vec3 + Send + Sync>) -> Self {
-        Self {sample_count, bounce_count, offset, cam, objects, env_shader}
-    }
-    pub fn get_env_shader() -> Box<dyn Fn(&Vec3)->Vec3+Sync+Send>{
-        let clos = |v: &Vec3| Vec3::lerp(&Vec3::new1(1.),&Vec3::new(0.5, 0.7, 1.), v.dot(&Vec3::up()).max(0.));
-        Box::new(clos)
-    }
-}
 
 //fragment shader -> runs for every pixel
 fn frag(x: usize, y: usize, input: &Uniforms) -> Pixel {
@@ -65,5 +37,7 @@ fn frag(x: usize, y: usize, input: &Uniforms) -> Pixel {
 
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
-    display(frag, scenes::scene3(), "sample");
+    let pic = display(frag, scenes::lalaland());
+    pic.blur(10).to_buffer().save("sample.png").expect("couldn't save image");
+    
 }

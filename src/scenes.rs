@@ -1,6 +1,14 @@
 #![allow(dead_code)]
+use image::{RgbImage, ImageReader};
+use raytracing::{	
+	WIDTH,
+	textures::{Picture, Texture},
+	geometry::{Material, Reflection, Camera}, 
+	Uniforms, 
+	objects::{Object, abstract_object}, 
+	vec3::Vec3
 
-use crate::*;
+};
 
 pub fn lalaland()-> Uniforms{
     let image: RgbImage = ImageReader::open("moon3.jpg").unwrap().decode().unwrap().into_rgb8();
@@ -86,7 +94,7 @@ pub fn scene3()->Uniforms{
         }
     }
     //boxes.append(&mut abstract_object::new_box(&Vec3::new(0., 0., 1.), &Vec3::new(0., 0., 2.), 2., Material::default()));
-    let boxes_bound = Object::BoundBox { min: Vec3::new(-2., -2., 0.), max: Vec3::new(2., 2., 5.), inside: boxes };
+    let boxes_bound = Object::BoundBox { min: Vec3::new1(-10.), max: Vec3::new1(10.), inside: boxes };
     Uniforms{
         sample_count: 100,
         bounce_count: 10,
@@ -99,3 +107,4 @@ pub fn scene3()->Uniforms{
         env_shader: Uniforms::get_env_shader()
     }
 } 
+
