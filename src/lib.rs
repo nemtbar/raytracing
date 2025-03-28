@@ -32,7 +32,7 @@ impl Uniforms {
         Self {sample_count, bounce_count, offset, cam, objects, env_shader}
     }
     pub fn get_env_shader() -> Box<dyn Fn(&Vec3)->Vec3+Sync+Send>{
-        let clos = |v: &Vec3| Vec3::lerp(&Vec3::new1(1.),&Vec3::new(0.5, 0.7, 1.), v.dot(&Vec3::up()).max(0.));
+        let clos = |v: &Vec3| Vec3::lerp(&Vec3::new1(0.8),&Vec3::new(0.5, 0.7, 1.), v.dot(&Vec3::up()).max(0.));
         Box::new(clos)
     }
 }

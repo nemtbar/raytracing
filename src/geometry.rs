@@ -28,7 +28,7 @@ impl HitInfo {
                 assert!(self.u >= 0. && self.u <= 1. && self.v >= 0. && self.v <= 1., "texture coord not in 0-1");
                 let x = (self.u * (img.width as f32)) as u32;
                 let y = (self.v * (img.height as f32)) as u32;
-                let color = img.get_pixel_normalized(x, y);
+                let color = img.get_pixel_normalized((x, y));
                 fin_color = color;
             }
         }

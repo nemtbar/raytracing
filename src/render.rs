@@ -54,7 +54,11 @@ impl Pixel {
     }
 
     pub fn to_vec(&self)->Vec3{
-        Vec3::new(self.r as f32/255., self.r as f32/255., self.r as f32/255.)
+        Vec3::new(self.r as f32/255., self.g as f32/255., self.b as f32/255.)
+    }
+
+    pub fn brightness(&self)->f32{
+        (self.r as f32+self.g as f32+self.b as f32)/3.
     }
 }
 
@@ -137,11 +141,12 @@ impl Picture {
         self.data.set(index+2, color.b);
     }
 
-    fn get_kernel(&self, pos: (i32, i32), step: i32) -> Vec<Pixel> {
+    fn get_kernel(&self, pos: (u32, u32), step: u32) -> Vec<Pixel> {
         let mut pixies: Vec<Pixel> = vec![];
-        for y in -step..step {
-            for x in -step..step {
-                let crr: (u32, u32) = ((pos.0+x).max(0).min((self.width-1) as i32) as u32, (pos.1+y).max(0).min((self.height-1) as i32) as u32);
+        let step_i32 = step as i32;
+        for y in -step_i32..step_i32 {
+            for x in -step_i32..step_i32 {
+                let crr: (u32, u32) = ((pos.0 as i32+x).max(0).min((self.width-1) as i32) as u32, (pos.1 as i32+y).max(0).min((self.height-1) as i32) as u32);
                 let index = self.get_first_index(crr.0, crr.1);
                 pixies.push(Pixel::new(self.data[index], self.data[index+1], self.data[index+2]));
             }
@@ -150,25 +155,55 @@ impl Picture {
         pixies
     }
 
-    fn avg_color(&self, pos: (i32, i32), step: i32)->Pixel{
-        todo!()
+    fn avg_color(kernel: &Vec<Pixel>)->Pixel{
+        let mut sum = Vec3::default();
+        for i in kernel{
+            sum = sum + i.to_vec();
+        }
+        Pixel::from_vec(sum/kernel.len() as f32)
     }
 
-    fn variance(&self, pos: (i32, i32), step: i32)->f32{
-        let mut pixies: Vec<[u8; 3]> = vec![];
-        for y in -step..step {
-            for x in -step..step {
-                let crr: (u32, u32) = ((pos.0+x).max(0).min((self.width-1) as i32) as u32, (pos.1+y).max(0).min((self.height-1) as i32) as u32);
-                let index = self.get_first_index(crr.0, crr.1);
-                pixies.push([self.data[index], self.data[index+1], self.data[index+2]]);
-            }
+    fn variance(&self, pos: (u32, u32), step: u32)->f32{
+        let kernel = self.get_kernel(pos, step);
+        let average = Picture::avg_color(&kernel).brightness();
+        let mut diff: Vec<f32> = vec![];
+        for i in &kernel {
+            let d = &average-i.brightness();
+            diff.push(d*d);
         }
-
-        0.
+        let mut avg_sqrt: f32 = 0.;
+        for i in &diff{
+            avg_sqrt += i;
+        }
+        avg_sqrt /= diff.len() as f32;
+        avg_sqrt.abs().sqrt()
     }
 
     pub fn blur(&self, step: u32) -> Self {
-        todo!()
+        let mut sol = Self::empty(self.width, self.height);
+        for y in 0..self.height {
+            for x in 0..self.width {
+                sol.set_pixel(x, y, Self::avg_color(&self.get_kernel((x, y), step)));
+            }
+        }
+        sol
+    }
+
+    pub fn denoise(&self, target: f32)->Self{
+        let mut sol = Self::empty(self.width, self.height);
+        for y in 0..self.height {
+            for x in 0..self.width {
+                if self.variance((x, y), 2) > target {
+                    let first_pass = Self::avg_color(&self.get_kernel((x, y), 5)).to_vec();
+                    let second_pass = Self::avg_color(&self.get_kernel((x, y), 2)).to_vec();
+                    sol.set_pixel(x, y, Pixel::from_vec(first_pass.lerp(&second_pass, 0.7)));
+                }else{
+                    sol.set_pixel(x, y, self.get_pixel((x,y)));
+                }
+            }
+        }
+
+        sol
     }
 
     pub fn to_buffer(&self)->RgbImage{

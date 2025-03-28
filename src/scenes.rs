@@ -2,12 +2,12 @@
 use image::{RgbImage, ImageReader};
 use raytracing::{	
 	WIDTH,
-	textures::{Picture, Texture},
+	textures::Texture,
 	geometry::{Material, Reflection, Camera}, 
 	Uniforms, 
 	objects::{Object, abstract_object}, 
-	vec3::Vec3
-
+	vec3::Vec3,
+    render::Picture
 };
 
 pub fn lalaland()-> Uniforms{
@@ -107,4 +107,17 @@ pub fn scene3()->Uniforms{
         env_shader: Uniforms::get_env_shader()
     }
 } 
+
+pub fn fast()->Uniforms{
+    Uniforms {
+        sample_count: 20,
+        bounce_count: 5,
+        offset: 0.,
+        cam: Camera::new(&Vec3::default(), &Vec3::back(), 45., &Vec3::up(), 0.),
+        objects: vec![
+            Object::Plane { pos: Vec3::up()*-1., normal: Vec3::up(), mat: Material::default() },
+        ],
+        env_shader: Uniforms::get_env_shader()
+    }
+}
 
