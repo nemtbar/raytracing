@@ -41,9 +41,11 @@ fn frag(x: usize, y: usize, input: &Uniforms) -> Pixel {
 
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
-    let mut uni = scenes::cylinder_test();
-    uni.sample_count = 300;
+    let mut uni = scenes::lalaland();
+    uni.sample_count = 50;
     let pic = display(frag, uni);
-    pic.to_buffer().save("sample2.png").expect("an error occured while saving the image");
+    //let pic = Picture::new(ImageReader::open("sample2.png").unwrap().decode().unwrap().to_rgb8());
+    pic.to_buffer().save("sample.png").expect("an error occured while saving the image");
+    pic.denoise(20).to_buffer().save("sample2.png").expect("an error occured while saving the image");
     
 }

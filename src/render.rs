@@ -163,11 +163,10 @@ impl Picture {
         Pixel::from_vec(sum/kernel.len() as f32)
     }
 
-    fn variance(&self, pos: (u32, u32), step: u32)->f32{
-        let kernel = self.get_kernel(pos, step);
+    fn sigma(kernel: &Vec<Pixel>)->f32{
         let average = Picture::avg_color(&kernel).brightness();
         let mut diff: Vec<f32> = vec![];
-        for i in &kernel {
+        for i in kernel {
             let d = &average-i.brightness();
             diff.push(d*d);
         }
@@ -189,20 +188,45 @@ impl Picture {
         sol
     }
 
-    pub fn denoise(&self, target: f32)->Self{
+    fn is_noise(pixel: &Pixel, kernel: &Vec<Pixel>, edge_detect: bool) -> bool {
+        let avg = Picture::avg_color(kernel).brightness();
+        let sigma = Self::sigma(kernel);
+        let brightness = pixel.brightness();
+
+        let greater = avg - sigma > brightness;
+        let less = avg + sigma < brightness;
+        if greater || less {
+            if greater && edge_detect {
+                let new_kernel: Vec<Pixel> = kernel.iter().filter(|p| p.brightness() < avg - sigma).copied().collect();
+                return Self::is_noise(pixel, &new_kernel, false);
+            } else if less && edge_detect{
+                let new_kernel = kernel.iter().filter(|p| p.brightness() > avg + sigma).copied().collect();
+                return Self::is_noise(pixel, &new_kernel, false);
+            }
+            return true;
+        }
+ 
+        false
+    }
+
+    pub fn denoise(&self, radius: u32)->Self{
+        println!("Denoising...");
         let mut sol = Self::empty(self.width, self.height);
+        let pb = ProgressBar::new((self.height*self.width) as u64);
         for y in 0..self.height {
             for x in 0..self.width {
-                if self.variance((x, y), 2) > target {
-                    let first_pass = Self::avg_color(&self.get_kernel((x, y), 5)).to_vec();
-                    let second_pass = Self::avg_color(&self.get_kernel((x, y), 2)).to_vec();
-                    sol.set_pixel(x, y, Pixel::from_vec(first_pass.lerp(&second_pass, 0.7)));
+                let kernel = self.get_kernel((x, y), radius);
+                if Self::is_noise(&self.get_pixel((x, y)), &kernel, true) {
+                    sol.set_pixel(x, y, Self::avg_color(&self.get_kernel((x, y), 4)));
+                    //sol.set_pixel(x, y, Pixel::new(255, 0, 0));
                 }else{
                     sol.set_pixel(x, y, self.get_pixel((x,y)));
                 }
+                pb.inc(1);
             }
         }
-
+        pb.finish_and_clear();
+        println!("done!");
         sol
     }
 
