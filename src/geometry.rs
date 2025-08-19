@@ -94,8 +94,7 @@ pub fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
     match hit.material.refl {
         Reflection::Diffuse() => {
             //lambertian reflection
-            let poi = &hit.p + &hit.normal;
-            sol.dir = (poi+Vec3::random() - &hit.p).normalize();
+            sol.dir = (&hit.normal + Vec3::random()).normalize();
 
         } 
         Reflection::Metal{roughness} => {
