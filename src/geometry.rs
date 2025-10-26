@@ -74,7 +74,7 @@ fn reflectance(cos: f32, eta: f32) -> f32 {
 
 }
 
-//the eta is the ratio of the refractive index of the second medium to the first medium
+//the eta is the ratio of the refractive indecies of the second medium and the first medium
 //index1*sin(theta1) = index2*sin(theta2)
 fn snell(incoming: &Vec3, normal: &Vec3, eta: f32) -> Vec3 {
     let cos_theta = (-1. * incoming).dot(normal).min(1.);
@@ -94,7 +94,7 @@ pub fn scatter(ray: &Ray, hit: &HitInfo) -> Ray {
     match hit.material.refl {
         Reflection::Diffuse() => {
             //lambertian reflection
-            sol.dir = (&hit.normal + Vec3::random()).normalize();
+            sol.dir = (hit.normal + Vec3::random()).normalize();
 
         } 
         Reflection::Metal{roughness} => {
